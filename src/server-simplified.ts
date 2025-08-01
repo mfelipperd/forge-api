@@ -7,6 +7,7 @@ import cors from "cors";
 import db from "./models";
 import doorRoutes from "./routes/doorRoutes";
 import customModelRoutes from "./routes/customModelRoutes";
+import ifcUploadRoutes from "./routes/ifcUploadRoutes";
 import forgeAuthService from "./services/forgeAuthService";
 
 const app = express();
@@ -149,6 +150,12 @@ app.use("/api/doors", doorRoutes);
  */
 app.use("/api/models", customModelRoutes);
 
+/**
+ * 7. UPLOAD E PROCESSAMENTO AUTOMÁTICO DE IFC 🚀 NOVA FUNCIONALIDADE
+ * Upload direto de arquivos .ifc com processamento automático
+ */
+app.use("/api/models/ifc", ifcUploadRoutes);
+
 // Configuração para produção
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(__dirname + "/../client/build"));
@@ -172,6 +179,8 @@ app.listen(PORT, () => {
   console.log(`   *    /api/doors/*         - Sistema de portas (CRUD)`);
   console.log(`   POST /api/models/upload-urn - Adicionar URN personalizada 🆕`);
   console.log(`   GET  /api/models/custom   - Listar modelos personalizados`);
+  console.log(`   POST /api/models/ifc/upload - Upload automático IFC 🚀`);
+  console.log(`   GET  /api/models/ifc/status/:id - Status processamento IFC`);
   console.log("=====================================\n");
 });
 

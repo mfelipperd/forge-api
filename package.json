@@ -21,12 +21,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/multer": "^2.0.0",
     "axios": "^1.7.3",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^4.19.2",
+    "form-data": "^4.0.4",
     "mongoose": "^8.5.2",
+    "multer": "^2.0.2",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

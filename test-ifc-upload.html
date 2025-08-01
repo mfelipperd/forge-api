@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Teste Upload IFC Automático</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        input, textarea, button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        input, textarea {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress {
+            display: none;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: rgba(76, 175, 80, 0.8);
+        }
+        
+        .status.error {
+            background: rgba(244, 67, 54, 0.8);
+        }
+        
+        .status.info {
+            background: rgba(33, 150, 243, 0.8);
+        }
+        
+        .endpoint-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .file-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Upload Automático de Arquivo IFC</h1>
+        
+        <div class="endpoint-info">
+            <strong>Endpoint:</strong> POST http://localhost:8081/api/models/ifc/upload<br>
+            <strong>Funcionalidade:</strong> Upload + Bucket + Translation + URN automático
+        </div>
+        
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="ifcFile">📁 Arquivo IFC:</label>
+                <input type="file" id="ifcFile" name="ifcFile" accept=".ifc,.IFC" required>
+                <div id="fileInfo" class="file-info" style="display: none;"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="name">🏷️ Nome do Modelo:</label>
+                <input type="text" id="name" name="name" placeholder="Ex: Edifício Comercial XYZ" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">📝 Descrição (opcional):</label>
+                <textarea id="description" name="description" placeholder="Descrição do modelo IFC..."></textarea>
+            </div>
+            
+            <button type="submit" id="uploadBtn">🚀 Fazer Upload e Processar Automaticamente</button>
+        </form>
+
+        <div id="progress" class="progress">
+            <h3>📊 Progresso do Processamento</h3>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mostrar informações do arquivo selecionado
+        document.getElementById('ifcFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const fileInfo = document.getElementById('fileInfo');
+            
+            if (file) {
+                const sizeKB = Math.round(file.size / 1024);
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                
+                fileInfo.innerHTML = `
+                    <strong>Arquivo selecionado:</strong><br>
+                    📄 Nome: ${file.name}<br>
+                    📏 Tamanho: ${sizeMB} MB (${sizeKB} KB)<br>
+                    📅 Modificado: ${new Date(file.lastModified).toLocaleString()}
+                `;
+                fileInfo.style.display = 'block';
+                
+                // Auto-preencher nome se estiver vazio
+                const nameInput = document.getElementById('name');
+                if (!nameInput.value) {
+                    nameInput.value = file.name.replace(/\.[^/.]+$/, ''); // Remove extensão
+                }
+            } else {
+                fileInfo.style.display = 'none';
+            }
+        });
+
+        // Handler do formulário
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const progressDiv = document.getElementById('progress');
+            const statusDiv = document.getElementById('status');
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            // Validações
+            const file = document.getElementById('ifcFile').files[0];
+            const name = document.getElementById('name').value.trim();
+            
+            if (!file) {
+                alert('❌ Por favor, selecione um arquivo IFC');
+                return;
+            }
+            
+            if (!name) {
+                alert('❌ Por favor, informe o nome do modelo');
+                return;
+            }
+            
+            // Verificar tamanho do arquivo (100MB max)
+            if (file.size > 100 * 1024 * 1024) {
+                alert('❌ Arquivo muito grande! Máximo 100MB permitido.');
+                return;
+            }
+            
+            try {
+                // Desabilitar botão e mostrar progresso
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = '🔄 Enviando...';
+                progressDiv.style.display = 'block';
+                statusDiv.innerHTML = '<div class="status info">🔄 Fazendo upload do arquivo...</div>';
+                
+                // Fazer upload
+                const response = await fetch('http://localhost:8081/api/models/ifc/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.innerHTML = `
+                        <div class="status success">
+                            ✅ Upload concluído com sucesso!<br>
+                            🎯 Modelo ID: ${result.model.id}<br>
+                            🔗 URN gerada: ${result.model.urn}<br>
+                            📊 Status: ${result.model.status} (${result.model.progress})<br>
+                            ⏱️ Tempo estimado: ${result.processing.estimatedTime}
+                        </div>
+                        <div class="status info">🔄 Iniciando monitoramento automático...</div>
+                    `;
+                    
+                    // Limpar formulário
+                    e.target.reset();
+                    document.getElementById('fileInfo').style.display = 'none';
+                    
+                    // Monitorar progresso
+                    monitorProgress(result.model.id, statusDiv);
+                    
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="status error">❌ Erro no upload: ${result.error}</div>
+                    `;
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="status error">❌ Erro de conexão: ${error.message}</div>
+                `;
+                console.error('Erro no upload:', error);
+                
+            } finally {
+                // Reabilitar botão
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '🚀 Fazer Upload e Processar Automaticamente';
+            }
+        });
+        
+        // Função para monitorar progresso
+        async function monitorProgress(modelId, statusDiv) {
+            let attempts = 0;
+            const maxAttempts = 60; // 5 minutos (60 x 5s)
+            
+            const checkStatus = async () => {
+                try {
+                    attempts++;
+                    
+                    const response = await fetch(`http://localhost:8081/api/models/ifc/status/${modelId}`);
+                    const statusData = await response.json();
+                    
+                    if (!statusData.success) {
+                        throw new Error(statusData.error || 'Erro ao verificar status');
+                    }
+                    
+                    const model = statusData.model;
+                    const forge = statusData.forge;
+                    
+                    // Atualizar status na tela
+                    const statusHtml = `
+                        <div class="status info">
+                            📊 Status: ${model.status} (${model.progress})<br>
+                            🔄 Tentativa: ${attempts}/${maxAttempts}<br>
+                            ${forge ? `🌐 Forge: ${forge.status} (${forge.progress})` : ''}
+                        </div>
+                    `;
+                    
+                    // Verificar se concluído
+                    if (model.status === 'success' && model.canVisualize) {
+                        statusDiv.innerHTML += `
+                            <div class="status success">
+                                🎉 Processamento concluído com sucesso!<br>
+                                ✅ Modelo pronto para visualização<br>
+                                🔗 URN: ${model.id}<br>
+                                📅 Processado em: ${new Date().toLocaleString()}
+                            </div>
+                        `;
+                        return; // Parar monitoramento
+                    }
+                    
+                    if (model.status === 'failed') {
+                        statusDiv.innerHTML += `
+                            <div class="status error">
+                                ❌ Processamento falhou<br>
+                                🔄 Você pode tentar novamente com outro arquivo
+                            </div>
+                        `;
+                        return; // Parar monitoramento
+                    }
+                    
+                    if (attempts >= maxAttempts) {
+                        statusDiv.innerHTML += `
+                            <div class="status error">
+                                ⏰ Timeout do monitoramento<br>
+                                ℹ️ O processamento pode ainda estar em andamento<br>
+                                🔄 Verifique manualmente: /api/models/ifc/status/${modelId}
+                            </div>
+                        `;
+                        return; // Parar monitoramento
+                    }
+                    
+                    // Atualizar status atual
+                    statusDiv.innerHTML = statusDiv.innerHTML.split('<div class="status info">📊 Status:')[0] + statusHtml;
+                    
+                    // Continuar monitoramento
+                    setTimeout(checkStatus, 5000); // 5 segundos
+                    
+                } catch (error) {
+                    console.error('Erro ao verificar status:', error);
+                    statusDiv.innerHTML += `
+                        <div class="status error">
+                            ❌ Erro no monitoramento: ${error.message}
+                        </div>
+                    `;
+                }
+            };
+            
+            // Iniciar verificação após 5 segundos
+            setTimeout(checkStatus, 5000);
+        }
+    </script>
+</body>
+</html>
