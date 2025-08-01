@@ -1,0 +1,27 @@
+### Verificar status atual dos modelos
+GET http://localhost:8081/api/models
+Content-Type: application/json
+
+###
+
+### Atualizar todos os modelos para status "success" (ADMIN)
+POST http://localhost:8081/api/models/admin/mark-success
+Content-Type: application/json
+
+###
+
+### Verificar status após atualização
+GET http://localhost:8081/api/models
+Content-Type: application/json
+
+###
+
+### Testar endpoint de status específico
+GET http://localhost:8081/api/models/688b9a85d0b9cb0d0808a8ab/status
+Content-Type: application/json
+
+###
+
+### Endpoint de sincronização com Forge
+POST http://localhost:8081/api/models/sync
+Content-Type: application/json

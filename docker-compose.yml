@@ -1,0 +1,16 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: forge-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: forge-viewer
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    command: mongod --noauth
+
+volumes:
+  mongodb_data:
