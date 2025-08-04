@@ -21,49 +21,36 @@ export class ModelsController {
         ];
       }
 
-      // Buscar em ambas as coleções
-      const regularModels = await Model.find(filter).sort({ uploadDate: -1 });
+      // Buscar todos os modelos unificados
+      const allModels = await Model.find(filter).sort({ uploadDate: -1 });
 
-      const CustomModel = require("../models/customModelModel").default;
-      const customModels = await CustomModel.find(filter).sort({
-        uploadedAt: -1,
-      });
+      // Mapear modelos com informações padronizadas
+      const mappedModels = allModels.map((model: any) => ({
+        ...model.toObject(),
+        // Determinar source baseado no tipo de arquivo ou metadata
+        source: model.fileType === "manual" || model.tags?.includes("manual") ? "custom" : "regular",
+        uploadDate: model.uploadDate || model.updatedAt,
+      }));
 
-      // Unificar os modelos em uma única lista
-      const allModels = [
-        ...regularModels.map((model: any) => ({
-          ...model.toObject(),
-          source: "regular",
-          uploadDate: model.uploadDate || model.updatedAt,
-        })),
-        ...customModels.map((model: any) => ({
-          ...model.toObject(),
-          source: "custom",
-          uploadDate: model.uploadedAt || model.updatedAt,
-        })),
-      ];
-
-      // Ordenar por data de upload (mais recente primeiro)
-      allModels.sort(
-        (a: any, b: any) =>
-          new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
-      );
+      // Contar por tipo
+      const regularCount = mappedModels.filter(m => m.source === "regular").length;
+      const customCount = mappedModels.filter(m => m.source === "custom").length;
 
       console.log(
-        `📋 Listando TODOS os modelos: ${allModels.length} encontrados`
+        `📋 Listando TODOS os modelos: ${mappedModels.length} encontrados`
       );
       console.log(
-        `   Regular: ${regularModels.length}, Custom: ${customModels.length}`
+        `   Regular: ${regularCount}, Custom: ${customCount}`
       );
 
       res.json({
         success: true,
-        count: allModels.length,
-        data: allModels,
+        count: mappedModels.length,
+        data: mappedModels,
         summary: {
-          regular: regularModels.length,
-          custom: customModels.length,
-          total: allModels.length,
+          regular: regularCount,
+          custom: customCount,
+          total: mappedModels.length,
         },
       });
     } catch (error) {

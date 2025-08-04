@@ -39,7 +39,7 @@ router.post("/upload-urn", async (req: Request, res: Response) => {
         existingModel: {
           id: existingModel._id,
           name: existingModel.name,
-          uploadedAt: existingModel.uploadedAt,
+          uploadDate: existingModel.uploadDate,
         },
       });
     }
@@ -77,7 +77,7 @@ router.post("/upload-urn", async (req: Request, res: Response) => {
         urn: newModel.urn,
         description: newModel.description,
         status: newModel.status,
-        uploadedAt: newModel.uploadedAt,
+        uploadDate: newModel.uploadDate,
       },
     });
   } catch (error) {
