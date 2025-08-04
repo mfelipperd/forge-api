@@ -1,0 +1,10 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('IFC Test File'), '2;1');
+FILE_NAME('test-debug.ifc', '2024-08-01T10:00:00', ('Test'), ('Test'), 'IFC Engine', 'Test Tool', '');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+DATA;
+#1 = IFCPROJECT('0YvhMJbzL0Rgszhvjx4xN7', $, 'Test Project Debug', $, $, $, $, $, $);
+ENDSEC;
+END-ISO-10303-21;

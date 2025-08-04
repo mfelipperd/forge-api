@@ -91,19 +91,23 @@ node list-models.js
 ## 📡 Endpoints Principais
 
 ### **🔐 Autenticação**
+
 - `GET /token` - Obter token Autodesk Forge
 
 ### **📦 Modelos Principais**
+
 - `GET /api/model/urn` - URN do modelo principal
 - `GET /api/model/:urn/properties` - Propriedades IFC
 
 ### **🆕 Sistema POST URN** (Nova funcionalidade)
+
 - `POST /api/models/upload-urn` - Adicionar URN personalizada
-- `GET /api/models/custom` - Listar modelos personalizados  
+- `GET /api/models/custom` - Listar modelos personalizados
 - `GET /api/models/custom/:id` - Obter modelo específico
 - `DELETE /api/models/custom/:id` - Deletar modelo personalizado
 
 ### **🚪 Sistema de Portas**
+
 - `GET /api/doors` - Listar portas
 - `POST /api/doors` - Criar porta
 - `PUT /api/doors/:id` - Atualizar porta
@@ -115,23 +119,25 @@ node list-models.js
 
 ```javascript
 // Adicionar nova URN via POST
-const response = await fetch('http://localhost:8081/api/models/upload-urn', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+const response = await fetch("http://localhost:8081/api/models/upload-urn", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     name: "Meu Modelo",
     urn: "dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6...",
-    description: "Descrição do modelo"
-  })
+    description: "Descrição do modelo",
+  }),
 });
 ```
 
 ### 🔄 **Validação Automática de URN**
+
 - Validação de formato base64
 - Verificação de duplicatas
 - Status de processamento automático
 
 ### 🧹 **Scripts de Manutenção**
+
 - `clean-database.js` - Limpa e restaura dados válidos
 - `list-models.js` - Lista todos os modelos
 - Sistema de backup automático
@@ -175,18 +181,21 @@ Esta é uma **versão estável** da API. Para futuras inovações:
 ## 🚨 Troubleshooting
 
 ### Problema: Porta 8081 em uso
+
 ```bash
 npx kill-port 8081
 npm run dev
 ```
 
 ### Problema: MongoDB connection
+
 ```bash
 # Verificar se MongoDB está rodando
 mongosh --eval "db.runCommand({connectionStatus : 1})"
 ```
 
 ### Problema: URN inválida
+
 ```bash
 node clean-database.js  # Restaura URNs válidas
 ```
@@ -200,7 +209,7 @@ node clean-database.js  # Restaura URNs válidas
 ## 🎯 Próximos Passos
 
 - [ ] Testes automatizados
-- [ ] Docker containerization  
+- [ ] Docker containerization
 - [ ] CI/CD pipeline
 - [ ] API rate limiting
 - [ ] Swagger UI integrado
@@ -208,4 +217,4 @@ node clean-database.js  # Restaura URNs válidas
 ---
 
 **💡 Esta versão está funcional e pronta para produção!**  
-*Mantenha esta versão como backup antes de implementar novas funcionalidades.*
+_Mantenha esta versão como backup antes de implementar novas funcionalidades._

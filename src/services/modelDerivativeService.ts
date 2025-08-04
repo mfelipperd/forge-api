@@ -5,10 +5,11 @@ import forgeAuthService from "./forgeAuthService";
  * URN padrão válida para teste
  */
 // Default URN for testing when no valid URN is available - Real URN from Autodesk extension
-const DEFAULT_TEST_URN = 'dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6Zm9yZ2Utdmlld2VyLW1vZGVscy9CUjYtQ1NGQUlQLklGQw';
+const DEFAULT_TEST_URN =
+  "dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6Zm9yZ2Utdmlld2VyLW1vZGVscy9CUjYtQ1NGQUlQLklGQw";
 
 /**
- * Função para obter URN válida (remove fake, usa padrão se necessário)
+ * Função para obter URN válida (apenas para fallback, não substitui URNs reais)
  */
 function getValidUrn(urn?: string): string {
   if (!urn) {
@@ -18,10 +19,17 @@ function getValidUrn(urn?: string): string {
 
   try {
     const decoded = Buffer.from(urn, "base64").toString();
-    if (decoded.includes("forge-viewer-models/")) {
+    // Apenas retorna URN de teste para URNs claramente fake/demo
+    // URNs reais do Forge devem ser mantidas como estão
+    if (
+      decoded.includes("forge-viewer-models/") &&
+      !decoded.includes("forge-real-")
+    ) {
       console.log("🔄 URN fake detectada, usando URN padrão de teste");
       return DEFAULT_TEST_URN;
     }
+    // Retorna a URN original para URNs reais
+    console.log("✅ URN válida detectada, mantendo URN original");
     return urn;
   } catch {
     console.log("🔄 URN inválida, usando URN padrão de teste");
@@ -38,43 +46,62 @@ class ModelDerivativeService {
    * Iniciar tradução de modelo para viewables
    */
   async translateModel(objectUrn: string): Promise<any> {
-    try {
-      const validUrn = getValidUrn(objectUrn);
-      const token = await forgeAuthService.getAccessToken();
+    const maxRetries = 2;
 
-      const body = {
-        input: {
-          urn: validUrn,
-        },
-        output: {
-          formats: [
-            {
-              type: "svf",
-              views: ["2d", "3d"],
-            },
-          ],
-        },
-      };
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const validUrn = getValidUrn(objectUrn);
+        const token = await forgeAuthService.getAccessToken();
 
-      const response = await axios.post(
-        "https://developer.api.autodesk.com/modelderivative/v2/designdata/job",
-        body,
-        {
-          headers: {
-            Authorization: `Bearer ${token.access_token}`,
-            "Content-Type": "application/json",
+        const body = {
+          input: {
+            urn: validUrn,
           },
-        }
-      );
+          output: {
+            formats: [
+              {
+                type: "svf",
+                views: ["2d", "3d"],
+              },
+            ],
+          },
+        };
 
-      console.log("✅ Tradução iniciada com sucesso!");
-      return response.data;
-    } catch (error: any) {
-      console.error(
-        "❌ Erro na tradução:",
-        error.response?.data || error.message
-      );
-      throw new Error("Falha na tradução do modelo");
+        const response = await axios.post(
+          "https://developer.api.autodesk.com/modelderivative/v2/designdata/job",
+          body,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        console.log("✅ Tradução iniciada com sucesso!");
+        return response.data;
+      } catch (error: any) {
+        console.error(
+          `❌ Erro na tradução (tentativa ${attempt}/${maxRetries}):`,
+          error.response?.data || error.message
+        );
+
+        // Verifica se é erro de token expirado
+        const isTokenError =
+          error.response?.status === 401 ||
+          error.response?.data?.errorCode === "AUTH-006";
+
+        if (isTokenError && attempt < maxRetries) {
+          console.log(
+            "🔄 Token expirado, limpando cache e tentando novamente..."
+          );
+          forgeAuthService.clearCache();
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+
+        throw new Error("Falha na tradução do modelo");
+      }
     }
   }
 
@@ -82,26 +109,45 @@ class ModelDerivativeService {
    * Verificar status da tradução
    */
   async getTranslationStatus(urn: string): Promise<any> {
-    try {
-      const validUrn = getValidUrn(urn);
-      const token = await forgeAuthService.getAccessToken();
+    const maxRetries = 2;
 
-      const response = await axios.get(
-        `https://developer.api.autodesk.com/modelderivative/v2/designdata/${validUrn}/manifest`,
-        {
-          headers: {
-            Authorization: `Bearer ${token.access_token}`,
-          },
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const validUrn = getValidUrn(urn);
+        const token = await forgeAuthService.getAccessToken();
+
+        const response = await axios.get(
+          `https://developer.api.autodesk.com/modelderivative/v2/designdata/${validUrn}/manifest`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        return response.data;
+      } catch (error: any) {
+        console.error(
+          `❌ Erro ao verificar status (tentativa ${attempt}/${maxRetries}):`,
+          error.response?.data || error.message
+        );
+
+        // Verifica se é erro de token expirado
+        const isTokenError =
+          error.response?.status === 401 ||
+          error.response?.data?.errorCode === "AUTH-006";
+
+        if (isTokenError && attempt < maxRetries) {
+          console.log(
+            "🔄 Token expirado, limpando cache e tentando novamente..."
+          );
+          forgeAuthService.clearCache();
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
         }
-      );
 
-      return response.data;
-    } catch (error: any) {
-      console.error(
-        "❌ Erro ao verificar status:",
-        error.response?.data || error.message
-      );
-      throw new Error("Falha ao verificar status da tradução");
+        throw new Error("Falha ao verificar status da tradução");
+      }
     }
   }
 

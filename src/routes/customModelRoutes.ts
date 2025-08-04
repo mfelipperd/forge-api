@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import CustomModel, { ICustomModel } from "../models/customModelModel";
+import Model from "../models/Model";
 import { v4 as uuidv4 } from "uuid";
 
 const router = Router();
@@ -17,7 +17,7 @@ router.post("/upload-urn", async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: "Nome e URN são obrigatórios",
-        required: ["name", "urn"]
+        required: ["name", "urn"],
       });
     }
 
@@ -26,12 +26,12 @@ router.post("/upload-urn", async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: "Formato de URN inválido. Deve ser uma string base64 válida.",
-        example: "dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6..."
+        example: "dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6...",
       });
     }
 
     // Verificar se URN já existe
-    const existingModel = await CustomModel.findOne({ urn });
+    const existingModel = await Model.findOne({ urn });
     if (existingModel) {
       return res.status(409).json({
         success: false,
@@ -39,37 +39,31 @@ router.post("/upload-urn", async (req: Request, res: Response) => {
         existingModel: {
           id: existingModel._id,
           name: existingModel.name,
-          uploadedAt: existingModel.uploadedAt
-        }
+          uploadDate: existingModel.uploadDate,
+        },
       });
     }
 
     // Criar novo modelo personalizado
     const modelId = uuidv4();
-    const newModel = new CustomModel({
+    const newModel = new Model({
       _id: modelId,
       name: name.trim(),
       fileName: fileName?.trim(),
       urn: urn.trim(),
+      base64Urn: urn.trim(),
       description: description?.trim(),
-      status: "processing", // Começa como processing
-      metadata: metadata || {}
+      status: "ready", // URN já validada e pronta
+      fileType: "manual",
+      tags: ["manual", "upload-urn"],
+      metadata: {
+        processingMethod: "manual-urn",
+        uploadedAt: new Date(),
+        ...metadata,
+      },
     });
 
     await newModel.save();
-
-    // Simular processamento (em produção seria real)
-    setTimeout(async () => {
-      try {
-        await CustomModel.findByIdAndUpdate(modelId, { 
-          status: "ready",
-          "metadata.elements.total": Math.floor(Math.random() * 100) + 10
-        });
-        console.log(`✅ Modelo ${name} processado com sucesso`);
-      } catch (error) {
-        console.error(`❌ Erro no processamento do modelo ${name}:`, error);
-      }
-    }, 2000);
 
     console.log(`📥 Nova URN adicionada: ${name} (${urn.substring(0, 20)}...)`);
 
@@ -83,16 +77,15 @@ router.post("/upload-urn", async (req: Request, res: Response) => {
         urn: newModel.urn,
         description: newModel.description,
         status: newModel.status,
-        uploadedAt: newModel.uploadedAt
-      }
+        uploadDate: newModel.uploadDate,
+      },
     });
-
   } catch (error) {
     console.error("❌ Erro ao adicionar URN:", error);
     res.status(500).json({
       success: false,
       error: "Erro interno do servidor ao processar URN",
-      details: process.env.NODE_ENV === "development" ? error : undefined
+      details: process.env.NODE_ENV === "development" ? error : undefined,
     });
   }
 });
@@ -100,27 +93,32 @@ router.post("/upload-urn", async (req: Request, res: Response) => {
 /**
  * GET /api/models/custom
  * Lista todos os modelos personalizados
+ *
+ * ⚠️  DESABILITADO: Use GET /api/models para listagem unificada
+ * Esta rota foi desabilitada para evitar confusão.
+ * Todos os modelos (regular + custom) agora são listados em /api/models
  */
+/*
 router.get("/custom", async (req: Request, res: Response) => {
   try {
-    const models = await CustomModel.find()
+    const models = await Model.find()
       .sort({ uploadedAt: -1 })
       .select("-__v");
 
     res.json({
       success: true,
       count: models.length,
-      models: models
+      models: models,
     });
-
   } catch (error) {
     console.error("❌ Erro ao listar modelos:", error);
     res.status(500).json({
       success: false,
-      error: "Erro ao listar modelos personalizados"
+      error: "Erro ao listar modelos personalizados",
     });
   }
 });
+*/
 
 /**
  * GET /api/models/custom/:id
@@ -129,25 +127,24 @@ router.get("/custom", async (req: Request, res: Response) => {
 router.get("/custom/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const model = await CustomModel.findById(id);
+    const model = await Model.findById(id);
 
     if (!model) {
       return res.status(404).json({
         success: false,
-        error: "Modelo não encontrado"
+        error: "Modelo não encontrado",
       });
     }
 
     res.json({
       success: true,
-      model: model
+      model: model,
     });
-
   } catch (error) {
     console.error("❌ Erro ao obter modelo:", error);
     res.status(500).json({
       success: false,
-      error: "Erro ao obter modelo personalizado"
+      error: "Erro ao obter modelo personalizado",
     });
   }
 });
@@ -159,12 +156,12 @@ router.get("/custom/:id", async (req: Request, res: Response) => {
 router.delete("/custom/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const deletedModel = await CustomModel.findByIdAndDelete(id);
+    const deletedModel = await Model.findByIdAndDelete(id);
 
     if (!deletedModel) {
       return res.status(404).json({
         success: false,
-        error: "Modelo não encontrado"
+        error: "Modelo não encontrado",
       });
     }
 
@@ -176,15 +173,14 @@ router.delete("/custom/:id", async (req: Request, res: Response) => {
       deletedModel: {
         id: deletedModel._id,
         name: deletedModel.name,
-        urn: deletedModel.urn
-      }
+        urn: deletedModel.urn,
+      },
     });
-
   } catch (error) {
     console.error("❌ Erro ao remover modelo:", error);
     res.status(500).json({
       success: false,
-      error: "Erro ao remover modelo personalizado"
+      error: "Erro ao remover modelo personalizado",
     });
   }
 });
@@ -195,10 +191,10 @@ router.delete("/custom/:id", async (req: Request, res: Response) => {
  */
 function isValidUrn(urn: string): boolean {
   if (!urn || typeof urn !== "string") return false;
-  
+
   // Deve ter pelo menos 10 caracteres
   if (urn.length < 10) return false;
-  
+
   // Regex para base64 básico
   const base64Regex = /^[A-Za-z0-9+/=]+$/;
   return base64Regex.test(urn);

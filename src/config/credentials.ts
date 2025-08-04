@@ -20,7 +20,8 @@ const credentials: ForgeCredentials = {
     client_id: process.env.FORGE_CLIENT_ID || "your_client_id",
     client_secret: process.env.FORGE_CLIENT_SECRET || "your_client_secret",
     grant_type: "client_credentials",
-    scope: "data:read data:write data:create viewables:read",
+    scope:
+      "data:read data:write data:create bucket:create bucket:read viewables:read",
   },
 
   // Autodesk Forge base URL (usando API v2 para OAuth 2.0)
