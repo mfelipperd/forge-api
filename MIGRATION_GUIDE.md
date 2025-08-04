@@ -3,6 +3,7 @@
 ## Comparação: Antes vs Depois
 
 ### ❌ VERSÃO ATUAL (Complexa)
+
 - **67+ endpoints** documentados
 - Sistema completo de validação de URN
 - Múltiplas rotas de processamento
@@ -10,6 +11,7 @@
 - Múltiplos modelos no banco
 
 ### ✅ VERSÃO SIMPLIFICADA (Otimizada)
+
 - **5 endpoints essenciais**
 - URN fixo extraído do manifest real
 - Baseado no padrão original MERN-Stack-Revit-Forge-Viewer
@@ -18,12 +20,14 @@
 ## 🚀 Como Migrar
 
 ### 1. Fazer Backup do Servidor Atual
+
 ```bash
 # O servidor atual foi mantido como server.ts
 # O novo servidor está em server-simplified.ts
 ```
 
 ### 2. Configurar package.json
+
 Adicione script para a versão simplificada:
 
 ```json
@@ -37,6 +41,7 @@ Adicione script para a versão simplificada:
 ```
 
 ### 3. Testar a Nova API
+
 ```bash
 # Testar status
 curl http://localhost:8081/
@@ -50,18 +55,18 @@ curl http://localhost:8081/api/model/urn
 
 ## 📊 Endpoints da Versão Simplificada
 
-| Endpoint | Método | Função |
-|----------|--------|--------|
-| `/` | GET | Status da API |
-| `/token` | GET | Token Autodesk Forge |
-| `/api/model/urn` | GET | **URN Principal** ⭐ |
-| `/api/model/:urn/properties` | GET | Propriedades IFC |
-| `/api/doors/*` | CRUD | Sistema de portas |
+| Endpoint                     | Método | Função               |
+| ---------------------------- | ------ | -------------------- |
+| `/`                          | GET    | Status da API        |
+| `/token`                     | GET    | Token Autodesk Forge |
+| `/api/model/urn`             | GET    | **URN Principal** ⭐ |
+| `/api/model/:urn/properties` | GET    | Propriedades IFC     |
+| `/api/doors/*`               | CRUD   | Sistema de portas    |
 
 ## 🎯 Benefícios da Simplificação
 
 1. **Manutenibilidade**: Código mais limpo e focado
-2. **Performance**: Menos overhead e validações desnecessárias  
+2. **Performance**: Menos overhead e validações desnecessárias
 3. **Portfolio**: Demonstração clara da integração Forge
 4. **Original**: Baseado no padrão do repositório de referência
 5. **Estabilidade**: URN fixo eliminando problemas de validação

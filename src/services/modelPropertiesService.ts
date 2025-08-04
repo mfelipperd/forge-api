@@ -31,30 +31,53 @@ class ModelPropertiesService {
    * Obter todas as propriedades de um modelo
    */
   async getModelProperties(urn: string): Promise<ModelPropertiesResponse> {
-    try {
-      const token = await forgeAuthService.getAccessToken();
+    const maxRetries = 2;
 
-      console.log("🔍 Obtendo propriedades do modelo:", urn);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const token = await forgeAuthService.getAccessToken();
 
-      const response = await axios.get(
-        `https://developer.api.autodesk.com/modelderivative/v2/designdata/${urn}/metadata/properties`,
-        {
-          headers: {
-            Authorization: `Bearer ${token.access_token}`,
-            "Content-Type": "application/json",
-          },
+        console.log("🔍 Obtendo propriedades do modelo:", urn);
+
+        const response = await axios.get(
+          `https://developer.api.autodesk.com/modelderivative/v2/designdata/${urn}/metadata/properties`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        console.log("✅ Propriedades obtidas com sucesso!");
+        return response.data;
+      } catch (error: any) {
+        console.error(
+          `❌ Erro ao obter propriedades (tentativa ${attempt}/${maxRetries}):`,
+          error.response?.data || error.message
+        );
+
+        // Verifica se é erro de token expirado
+        const isTokenError =
+          error.response?.status === 401 ||
+          error.response?.data?.errorCode === "AUTH-006";
+
+        if (isTokenError && attempt < maxRetries) {
+          console.log(
+            "🔄 Token expirado, limpando cache e tentando novamente..."
+          );
+          forgeAuthService.clearCache();
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
         }
-      );
 
-      console.log("✅ Propriedades obtidas com sucesso!");
-      return response.data;
-    } catch (error: any) {
-      console.error(
-        "❌ Erro ao obter propriedades:",
-        error.response?.data || error.message
-      );
-      throw new Error("Falha ao obter propriedades do modelo");
+        throw new Error("Falha ao obter propriedades do modelo");
+      }
     }
+
+    throw new Error(
+      "Falha ao obter propriedades do modelo após múltiplas tentativas"
+    );
   }
 
   /**
@@ -64,38 +87,61 @@ class ModelPropertiesService {
     urn: string,
     externalIds: string[]
   ): Promise<ModelPropertiesResponse> {
-    try {
-      const token = await forgeAuthService.getAccessToken();
+    const maxRetries = 2;
 
-      const requestBody = {
-        fields: ["objectid", "name", "externalId", "properties"],
-        query: {
-          $in: ["externalId", externalIds],
-        },
-      };
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const token = await forgeAuthService.getAccessToken();
 
-      console.log("🔍 Obtendo propriedades de objetos específicos...");
-
-      const response = await axios.post(
-        `https://developer.api.autodesk.com/modelderivative/v2/designdata/${urn}/metadata/properties:query`,
-        requestBody,
-        {
-          headers: {
-            Authorization: `Bearer ${token.access_token}`,
-            "Content-Type": "application/json",
+        const requestBody = {
+          fields: ["objectid", "name", "externalId", "properties"],
+          query: {
+            $in: ["externalId", externalIds],
           },
-        }
-      );
+        };
 
-      console.log("✅ Propriedades de objetos obtidas com sucesso!");
-      return response.data;
-    } catch (error: any) {
-      console.error(
-        "❌ Erro ao obter propriedades de objetos:",
-        error.response?.data || error.message
-      );
-      throw new Error("Falha ao obter propriedades dos objetos");
+        console.log("🔍 Obtendo propriedades de objetos específicos...");
+
+        const response = await axios.post(
+          `https://developer.api.autodesk.com/modelderivative/v2/designdata/${urn}/metadata/properties:query`,
+          requestBody,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        console.log("✅ Propriedades de objetos obtidas com sucesso!");
+        return response.data;
+      } catch (error: any) {
+        console.error(
+          `❌ Erro ao obter propriedades de objetos (tentativa ${attempt}/${maxRetries}):`,
+          error.response?.data || error.message
+        );
+
+        // Verifica se é erro de token expirado
+        const isTokenError =
+          error.response?.status === 401 ||
+          error.response?.data?.errorCode === "AUTH-006";
+
+        if (isTokenError && attempt < maxRetries) {
+          console.log(
+            "🔄 Token expirado, limpando cache e tentando novamente..."
+          );
+          forgeAuthService.clearCache();
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+
+        throw new Error("Falha ao obter propriedades dos objetos");
+      }
     }
+
+    throw new Error(
+      "Falha ao obter propriedades dos objetos após múltiplas tentativas"
+    );
   }
 
   /**

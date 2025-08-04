@@ -13,11 +13,13 @@
 ## 📋 Índice de Endpoints
 
 ### 🏗️ **Endpoints Principais**
+
 - [Status e Saúde](#status-e-saúde)
 - [Autenticação Forge](#autenticação-forge)
 - [Modelos - Visualização](#modelos---visualização)
 
 ### 🗃️ **Gerenciamento de Modelos**
+
 - [Listar Modelos](#listar-modelos)
 - [Detalhes do Modelo](#detalhes-do-modelo)
 - [Criar Modelo](#criar-modelo)
@@ -30,6 +32,7 @@
 - [Admin - Marcar Sucesso](#admin---marcar-sucesso)
 
 ### 🔧 **Processamento de Modelos**
+
 - [Obter URN](#obter-urn)
 - [Traduzir Modelo](#traduzir-modelo)
 - [Status da Tradução](#status-da-tradução)
@@ -37,6 +40,7 @@
 - [Analisar IFC](#analisar-ifc)
 
 ### 🚪 **Gerenciamento de Portas**
+
 - [Listar Portas](#listar-portas)
 - [Criar Porta](#criar-porta)
 - [Criar Portas em Lote](#criar-portas-em-lote)
@@ -47,11 +51,13 @@
 ## 🏗️ Status e Saúde
 
 ### **GET** `/`
+
 **Descrição**: Informações gerais da API
 
 **Request**: Nenhum parâmetro necessário
 
 **Response**:
+
 ```json
 {
   "message": "🚀 Forge API Server - URN Generation & Model Management",
@@ -64,11 +70,13 @@
 ```
 
 ### **GET** `/api/test`
+
 **Descrição**: Endpoint de teste para verificar se a API está funcionando
 
 **Request**: Nenhum parâmetro necessário
 
 **Response**:
+
 ```json
 {
   "message": "Teste funcionando!",
@@ -81,11 +89,13 @@
 ## 🔐 Autenticação Forge
 
 ### **GET** `/token`
+
 **Descrição**: Obtém token de acesso do Autodesk Forge
 
 **Request**: Nenhum parâmetro necessário
 
 **Response**:
+
 ```json
 {
   "access_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6...",
@@ -95,6 +105,7 @@
 ```
 
 **Códigos de Status**:
+
 - `200`: Token obtido com sucesso
 - `500`: Falha na autenticação
 
@@ -103,17 +114,21 @@
 ## 🎯 Modelos - Visualização
 
 ### **GET** `/api/viewer-urn/:id` ⭐ **RECOMENDADO**
+
 **Descrição**: Obtém URN válida para visualização no Forge Viewer (remove URNs fake automaticamente)
 
 **Parâmetros**:
+
 - `id` (path): ID do modelo no banco de dados
 
 **Request**:
+
 ```
 GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -128,6 +143,7 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 **Códigos de Status**:
+
 - `200`: URN obtida com sucesso
 - `404`: Modelo não encontrado
 - `500`: Erro interno do servidor
@@ -137,11 +153,13 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ## 🗃️ Gerenciamento de Modelos
 
 ### **GET** `/api/models`
+
 **Descrição**: Lista todos os modelos disponíveis
 
 **Request**: Nenhum parâmetro necessário
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -173,17 +191,21 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 ### **GET** `/api/models/:id`
+
 **Descrição**: Obtém detalhes de um modelo específico
 
 **Parâmetros**:
+
 - `id` (path): ID do modelo
 
 **Response**: Objeto do modelo (mesmo formato do array acima)
 
 ### **POST** `/api/models`
+
 **Descrição**: Registra um novo modelo
 
 **Request Body**:
+
 ```json
 {
   "name": "Nome do Modelo",
@@ -198,9 +220,11 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 **Response**: Modelo criado (formato similar ao GET)
 
 ### **PUT** `/api/models/:id`
+
 **Descrição**: Atualiza um modelo existente
 
 **Parâmetros**:
+
 - `id` (path): ID do modelo
 
 **Request Body**: Campos a serem atualizados (parcial)
@@ -208,12 +232,15 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 **Response**: Modelo atualizado
 
 ### **DELETE** `/api/models/:id`
+
 **Descrição**: Remove um modelo
 
 **Parâmetros**:
+
 - `id` (path): ID do modelo
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -222,9 +249,11 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 ### **GET** `/api/models/stats`
+
 **Descrição**: Obtém estatísticas dos modelos
 
 **Response**:
+
 ```json
 {
   "total": 1,
@@ -241,9 +270,11 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 ### **POST** `/api/models/sync`
+
 **Descrição**: Sincroniza todos os modelos com o Forge
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -253,12 +284,15 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 ### **GET** `/api/models/:id/status`
+
 **Descrição**: Obtém status de processamento de um modelo
 
 **Parâmetros**:
+
 - `id` (path): ID do modelo
 
 **Response**:
+
 ```json
 {
   "id": "688b9a77d0b9cb0d0808a8a8",
@@ -269,12 +303,15 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 ### **GET** `/api/models/:id/properties`
+
 **Descrição**: Obtém propriedades de um modelo
 
 **Parâmetros**:
+
 - `id` (path): ID do modelo
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -287,9 +324,11 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 ### **POST** `/api/models/admin/mark-success`
+
 **Descrição**: Marca modelos como processados com sucesso (Admin)
 
 **Request Body**:
+
 ```json
 {
   "modelIds": ["id1", "id2"],
@@ -298,6 +337,7 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -310,14 +350,17 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ## 🔧 Processamento de Modelos (Legacy)
 
 ### **GET** `/api/model/urn`
+
 **Descrição**: Obtém URN de modelo (método legado)
 
 **Response**: URN do modelo
 
 ### **POST** `/api/model/translate`
+
 **Descrição**: Inicia tradução de modelo no Forge
 
 **Request Body**:
+
 ```json
 {
   "bucketKey": "bucket-name",
@@ -328,23 +371,29 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 **Response**: Status da tradução iniciada
 
 ### **GET** `/api/model/:urn/status`
+
 **Descrição**: Verifica status da tradução
 
 **Parâmetros**:
+
 - `urn` (path): URN do modelo (encoded)
 
 **Response**: Status atual da tradução
 
 ### **GET** `/api/model/:urn/properties`
+
 **Descrição**: Obtém propriedades do modelo (método legado)
 
 **Parâmetros**:
+
 - `urn` (path): URN do modelo (encoded)
 
 ### **GET** `/api/model/:urn/analyze`
+
 **Descrição**: Analisa modelo IFC
 
 **Parâmetros**:
+
 - `urn` (path): URN do modelo (encoded)
 
 **Response**: Análise detalhada do modelo IFC
@@ -354,9 +403,11 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ## 🚪 Gerenciamento de Portas
 
 ### **GET** `/api/doors`
+
 **Descrição**: Lista todas as portas
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -374,9 +425,11 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 ### **POST** `/api/doors/add`
+
 **Descrição**: Cria uma nova porta
 
 **Request Body**:
+
 ```json
 {
   "mark": "P01",
@@ -387,9 +440,11 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 ### **POST** `/api/doors/batch`
+
 **Descrição**: Cria múltiplas portas em lote
 
 **Request Body**:
+
 ```json
 {
   "doors": [
@@ -399,7 +454,7 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
       "familyType": "Porta Padrão"
     },
     {
-      "mark": "P02", 
+      "mark": "P02",
       "finish": "Metal",
       "familyType": "Porta Industrial"
     }
@@ -408,9 +463,11 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 ```
 
 ### **DELETE** `/api/doors/delete`
+
 **Descrição**: Remove uma porta
 
 **Request Body**:
+
 ```json
 {
   "id": "door_id"
@@ -421,13 +478,13 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 
 ## 🚨 Códigos de Status HTTP
 
-| Código | Significado | Descrição |
-|--------|-------------|-----------|
-| 200 | OK | Requisição bem-sucedida |
-| 201 | Created | Recurso criado com sucesso |
-| 400 | Bad Request | Dados de entrada inválidos |
-| 404 | Not Found | Recurso não encontrado |
-| 500 | Internal Server Error | Erro interno do servidor |
+| Código | Significado           | Descrição                  |
+| ------ | --------------------- | -------------------------- |
+| 200    | OK                    | Requisição bem-sucedida    |
+| 201    | Created               | Recurso criado com sucesso |
+| 400    | Bad Request           | Dados de entrada inválidos |
+| 404    | Not Found             | Recurso não encontrado     |
+| 500    | Internal Server Error | Erro interno do servidor   |
 
 ---
 
@@ -435,9 +492,9 @@ GET /api/viewer-urn/688b9a77d0b9cb0d0808a8a8
 
 ```javascript
 const headers = {
-  'Content-Type': 'application/json',
-  'Accept': 'application/json'
-}
+  "Content-Type": "application/json",
+  Accept: "application/json",
+};
 ```
 
 ---
@@ -445,16 +502,19 @@ const headers = {
 ## 🎯 Endpoints Mais Usados (Recomendados)
 
 ### **Para Frontend/Visualização**:
+
 1. `GET /token` - Obter token Forge
 2. `GET /api/models` - Listar modelos
 3. `GET /api/viewer-urn/:id` - Obter URN válida ⭐
 
 ### **Para Gerenciamento**:
+
 1. `GET /api/models/stats` - Estatísticas
 2. `POST /api/models/sync` - Sincronizar
 3. `GET /api/models/:id/status` - Status
 
 ### **Para Desenvolvimento**:
+
 1. `GET /api/test` - Teste de conectividade
 2. `GET /` - Informações da API
 

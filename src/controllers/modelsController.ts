@@ -4,7 +4,7 @@ import modelDerivativeService from "../services/modelDerivativeService";
 import modelPropertiesService from "../services/modelPropertiesService";
 
 export class ModelsController {
-  // Listar todos os modelos
+  // Listar todos os modelos (UNIFICADO: Model + CustomModel)
   async getAllModels(req: Request, res: Response) {
     try {
       const { status, tag, search } = req.query;
@@ -21,12 +21,50 @@ export class ModelsController {
         ];
       }
 
-      const models = await Model.find(filter).sort({ uploadDate: -1 });
+      // Buscar em ambas as coleções
+      const regularModels = await Model.find(filter).sort({ uploadDate: -1 });
+
+      const CustomModel = require("../models/customModelModel").default;
+      const customModels = await CustomModel.find(filter).sort({
+        uploadedAt: -1,
+      });
+
+      // Unificar os modelos em uma única lista
+      const allModels = [
+        ...regularModels.map((model: any) => ({
+          ...model.toObject(),
+          source: "regular",
+          uploadDate: model.uploadDate || model.updatedAt,
+        })),
+        ...customModels.map((model: any) => ({
+          ...model.toObject(),
+          source: "custom",
+          uploadDate: model.uploadedAt || model.updatedAt,
+        })),
+      ];
+
+      // Ordenar por data de upload (mais recente primeiro)
+      allModels.sort(
+        (a: any, b: any) =>
+          new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+      );
+
+      console.log(
+        `📋 Listando TODOS os modelos: ${allModels.length} encontrados`
+      );
+      console.log(
+        `   Regular: ${regularModels.length}, Custom: ${customModels.length}`
+      );
 
       res.json({
         success: true,
-        count: models.length,
-        data: models,
+        count: allModels.length,
+        data: allModels,
+        summary: {
+          regular: regularModels.length,
+          custom: customModels.length,
+          total: allModels.length,
+        },
       });
     } catch (error) {
       console.error("Erro ao listar modelos:", error);
@@ -180,13 +218,35 @@ export class ModelsController {
   async deleteModel(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const model = await Model.findByIdAndDelete(id);
+
+      // Validar se o ID é um ObjectId válido do MongoDB
+      const mongoose = require("mongoose");
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          error: "ID inválido",
+          message: "O ID fornecido não é um ObjectId válido do MongoDB",
+        });
+      }
+
+      // Primeiro tentar deletar da coleção principal (Model)
+      let model = await Model.findByIdAndDelete(id);
+
+      // Se não encontrou, tentar na coleção de modelos personalizados
+      if (!model) {
+        const CustomModel = require("../models/customModelModel").default;
+        model = await CustomModel.findByIdAndDelete(id);
+      }
 
       if (!model) {
         return res.status(404).json({
+          success: false,
           error: "Modelo não encontrado",
+          message: `Nenhum modelo encontrado com o ID: ${id}`,
         });
       }
+
+      console.log(`🗑️ Modelo removido: ${model.name || model.fileName}`);
 
       res.json({
         success: true,
@@ -195,11 +255,13 @@ export class ModelsController {
           id: model._id,
           name: model.name,
           fileName: model.fileName,
+          urn: model.urn,
         },
       });
     } catch (error) {
-      console.error("Erro ao deletar modelo:", error);
+      console.error("❌ Erro ao deletar modelo:", error);
       res.status(500).json({
+        success: false,
         error: "Erro ao deletar modelo",
         message: error instanceof Error ? error.message : "Erro desconhecido",
       });

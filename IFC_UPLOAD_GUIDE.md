@@ -5,6 +5,7 @@
 ## 📋 Visão Geral
 
 Esta nova funcionalidade automatiza completamente o processo de:
+
 1. **Upload** do arquivo .ifc
 2. **Criação** automática de bucket no Autodesk OSS
 3. **Tradução** automática via Model Derivative API
@@ -22,6 +23,7 @@ Upload e processamento automático de arquivo IFC.
 **Content-Type**: `multipart/form-data`
 
 **Campos do Form**:
+
 - `ifcFile` (obrigatório): Arquivo .ifc
 - `name` (obrigatório): Nome do modelo
 - `description` (opcional): Descrição do modelo
@@ -40,32 +42,35 @@ curl -X POST http://localhost:8081/api/models/ifc/upload \
 ### 2. **Upload via JavaScript (Frontend)**
 
 ```javascript
-const uploadIFC = async (file, modelName, description = '') => {
+const uploadIFC = async (file, modelName, description = "") => {
   const formData = new FormData();
-  formData.append('ifcFile', file);
-  formData.append('name', modelName);
-  formData.append('description', description);
+  formData.append("ifcFile", file);
+  formData.append("name", modelName);
+  formData.append("description", description);
 
   try {
-    const response = await fetch('http://localhost:8081/api/models/ifc/upload', {
-      method: 'POST',
-      body: formData
-    });
+    const response = await fetch(
+      "http://localhost:8081/api/models/ifc/upload",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
 
     const result = await response.json();
-    
+
     if (result.success) {
-      console.log('✅ Upload iniciado:', result.model);
-      console.log('🔄 URN gerada:', result.model.urn);
-      console.log('📊 Acompanhar em:', result.nextSteps.checkStatus);
-      
+      console.log("✅ Upload iniciado:", result.model);
+      console.log("🔄 URN gerada:", result.model.urn);
+      console.log("📊 Acompanhar em:", result.nextSteps.checkStatus);
+
       // Monitorar progresso
       monitorProgress(result.model.id);
     } else {
-      console.error('❌ Erro no upload:', result.error);
+      console.error("❌ Erro no upload:", result.error);
     }
   } catch (error) {
-    console.error('❌ Erro de rede:', error);
+    console.error("❌ Erro de rede:", error);
   }
 };
 
@@ -73,29 +78,34 @@ const uploadIFC = async (file, modelName, description = '') => {
 const monitorProgress = async (modelId) => {
   const checkStatus = async () => {
     try {
-      const response = await fetch(`http://localhost:8081/api/models/ifc/status/${modelId}`);
+      const response = await fetch(
+        `http://localhost:8081/api/models/ifc/status/${modelId}`
+      );
       const status = await response.json();
-      
-      console.log(`📊 Status: ${status.model.status} (${status.model.progress})`);
-      
-      if (status.model.status === 'success') {
-        console.log('🎉 Processamento concluído! Modelo pronto para visualização.');
+
+      console.log(
+        `📊 Status: ${status.model.status} (${status.model.progress})`
+      );
+
+      if (status.model.status === "success") {
+        console.log(
+          "🎉 Processamento concluído! Modelo pronto para visualização."
+        );
         return;
       }
-      
-      if (status.model.status === 'failed') {
-        console.log('❌ Processamento falhou.');
+
+      if (status.model.status === "failed") {
+        console.log("❌ Processamento falhou.");
         return;
       }
-      
+
       // Continuar monitorando
       setTimeout(checkStatus, 5000);
-      
     } catch (error) {
-      console.error('❌ Erro ao verificar status:', error);
+      console.error("❌ Erro ao verificar status:", error);
     }
   };
-  
+
   checkStatus();
 };
 ```
@@ -105,91 +115,96 @@ const monitorProgress = async (modelId) => {
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Upload IFC Automático</title>
-</head>
-<body>
-  <h1>🚀 Upload Automático de Arquivo IFC</h1>
-  
-  <form id="uploadForm" enctype="multipart/form-data">
-    <div>
-      <label>Arquivo IFC:</label>
-      <input type="file" name="ifcFile" accept=".ifc" required>
-    </div>
-    
-    <div>
-      <label>Nome do Modelo:</label>
-      <input type="text" name="name" required>
-    </div>
-    
-    <div>
-      <label>Descrição:</label>
-      <textarea name="description"></textarea>
-    </div>
-    
-    <button type="submit">🚀 Fazer Upload e Processar</button>
-  </form>
+  <head>
+    <title>Upload IFC Automático</title>
+  </head>
+  <body>
+    <h1>🚀 Upload Automático de Arquivo IFC</h1>
 
-  <div id="progress" style="display: none;">
-    <h3>📊 Progresso do Processamento</h3>
-    <div id="status"></div>
-  </div>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <div>
+        <label>Arquivo IFC:</label>
+        <input type="file" name="ifcFile" accept=".ifc" required />
+      </div>
 
-  <script>
-    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const formData = new FormData(e.target);
-      const progressDiv = document.getElementById('progress');
-      const statusDiv = document.getElementById('status');
-      
-      try {
-        progressDiv.style.display = 'block';
-        statusDiv.innerHTML = '🔄 Fazendo upload...';
-        
-        const response = await fetch('http://localhost:8081/api/models/ifc/upload', {
-          method: 'POST',
-          body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          statusDiv.innerHTML = `✅ Upload concluído! URN: ${result.model.urn}<br>🔄 Processando...`;
-          
-          // Monitorar progresso
-          const monitorInterval = setInterval(async () => {
-            try {
-              const statusResponse = await fetch(`http://localhost:8081/api/models/ifc/status/${result.model.id}`);
-              const statusData = await statusResponse.json();
-              
-              statusDiv.innerHTML = `📊 Status: ${statusData.model.status} (${statusData.model.progress})`;
-              
-              if (statusData.model.status === 'success') {
-                statusDiv.innerHTML += '<br>🎉 Processamento concluído! Modelo pronto para visualização.';
-                clearInterval(monitorInterval);
+      <div>
+        <label>Nome do Modelo:</label>
+        <input type="text" name="name" required />
+      </div>
+
+      <div>
+        <label>Descrição:</label>
+        <textarea name="description"></textarea>
+      </div>
+
+      <button type="submit">🚀 Fazer Upload e Processar</button>
+    </form>
+
+    <div id="progress" style="display: none;">
+      <h3>📊 Progresso do Processamento</h3>
+      <div id="status"></div>
+    </div>
+
+    <script>
+      document
+        .getElementById("uploadForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const formData = new FormData(e.target);
+          const progressDiv = document.getElementById("progress");
+          const statusDiv = document.getElementById("status");
+
+          try {
+            progressDiv.style.display = "block";
+            statusDiv.innerHTML = "🔄 Fazendo upload...";
+
+            const response = await fetch(
+              "http://localhost:8081/api/models/ifc/upload",
+              {
+                method: "POST",
+                body: formData,
               }
-              
-              if (statusData.model.status === 'failed') {
-                statusDiv.innerHTML += '<br>❌ Processamento falhou.';
-                clearInterval(monitorInterval);
-              }
-              
-            } catch (error) {
-              console.error('Erro ao verificar status:', error);
+            );
+
+            const result = await response.json();
+
+            if (result.success) {
+              statusDiv.innerHTML = `✅ Upload concluído! URN: ${result.model.urn}<br>🔄 Processando...`;
+
+              // Monitorar progresso
+              const monitorInterval = setInterval(async () => {
+                try {
+                  const statusResponse = await fetch(
+                    `http://localhost:8081/api/models/ifc/status/${result.model.id}`
+                  );
+                  const statusData = await statusResponse.json();
+
+                  statusDiv.innerHTML = `📊 Status: ${statusData.model.status} (${statusData.model.progress})`;
+
+                  if (statusData.model.status === "success") {
+                    statusDiv.innerHTML +=
+                      "<br>🎉 Processamento concluído! Modelo pronto para visualização.";
+                    clearInterval(monitorInterval);
+                  }
+
+                  if (statusData.model.status === "failed") {
+                    statusDiv.innerHTML += "<br>❌ Processamento falhou.";
+                    clearInterval(monitorInterval);
+                  }
+                } catch (error) {
+                  console.error("Erro ao verificar status:", error);
+                }
+              }, 3000);
+            } else {
+              statusDiv.innerHTML = `❌ Erro: ${result.error}`;
             }
-          }, 3000);
-          
-        } else {
-          statusDiv.innerHTML = `❌ Erro: ${result.error}`;
-        }
-        
-      } catch (error) {
-        statusDiv.innerHTML = `❌ Erro de conexão: ${error.message}`;
-      }
-    });
-  </script>
-</body>
+          } catch (error) {
+            statusDiv.innerHTML = `❌ Erro de conexão: ${error.message}`;
+          }
+        });
+    </script>
+  </body>
 </html>
 ```
 
@@ -200,6 +215,7 @@ const monitorProgress = async (modelId) => {
 Verifica o status de processamento de um upload.
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -223,11 +239,11 @@ Verifica o status de processamento de um upload.
 
 ## 🔄 Estados do Processamento
 
-| Status | Descrição | Progresso | Visualizável |
-|--------|-----------|-----------|-------------|
-| `translating` | Processando no Forge | 0-99% | ❌ |
-| `success` | Concluído com sucesso | 100% | ✅ |
-| `failed` | Falhou no processamento | - | ❌ |
+| Status        | Descrição               | Progresso | Visualizável |
+| ------------- | ----------------------- | --------- | ------------ |
+| `translating` | Processando no Forge    | 0-99%     | ❌           |
+| `success`     | Concluído com sucesso   | 100%      | ✅           |
+| `failed`      | Falhou no processamento | -         | ❌           |
 
 ## ⚡ Características da Funcionalidade
 
@@ -287,19 +303,23 @@ mkdir -p uploads/temp
 ## 🚨 Troubleshooting
 
 ### **Erro: "Apenas arquivos .ifc são permitidos"**
+
 - Verifique se o arquivo tem extensão `.ifc`
 - Certifique-se de que o `Content-Type` está correto
 
 ### **Erro: "Erro ao criar bucket"**
+
 - Verifique as credenciais Forge
 - Confirme que o `FORGE_CLIENT_ID` é válido
 
 ### **Status: "failed"**
+
 - Arquivo pode estar corrompido
 - Verifique se é um arquivo IFC válido
 - Tente com arquivo menor
 
 ### **Upload lento**
+
 - Arquivos grandes (>50MB) demoram mais
 - Verifique sua conexão de internet
 - Considere compactar o arquivo IFC
@@ -313,17 +333,17 @@ const input = document.querySelector('input[type="file"]');
 const file = input.files[0];
 
 const formData = new FormData();
-formData.append('ifcFile', file);
-formData.append('name', 'Meu Projeto');
+formData.append("ifcFile", file);
+formData.append("name", "Meu Projeto");
 
-fetch('/api/models/ifc/upload', {
-  method: 'POST',
-  body: formData
+fetch("/api/models/ifc/upload", {
+  method: "POST",
+  body: formData,
 })
-.then(res => res.json())
-.then(data => {
-  console.log('URN gerada:', data.model.urn);
-});
+  .then((res) => res.json())
+  .then((data) => {
+    console.log("URN gerada:", data.model.urn);
+  });
 ```
 
 ### **Verificação de status**
@@ -332,11 +352,11 @@ fetch('/api/models/ifc/upload', {
 const checkStatus = async (modelId) => {
   const response = await fetch(`/api/models/ifc/status/${modelId}`);
   const data = await response.json();
-  
+
   return {
     isReady: data.model.canVisualize,
     progress: data.model.progress,
-    urn: data.model.urn
+    urn: data.model.urn,
   };
 };
 ```

@@ -10,13 +10,15 @@ import db from "./models";
 import doorRoutes from "./routes/doorRoutes";
 import modelRoutes from "./routes/modelRoutes";
 import modelsRoutes from "./routes/modelsRoutes";
+import ifcUploadRoutes from "./routes/ifcUploadRoutes";
 import forgeAuthService from "./services/forgeAuthService";
 
 const app = express();
 
 // URN padrão válida para teste (modelo que sabemos que funciona)
 // Default URN for testing when no valid URN is available - Real URN from Autodesk extension
-const DEFAULT_TEST_URN = 'dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6Zm9yZ2Utdmlld2VyLW1vZGVscy9CUjYtQ1NGQUlQLklGQw';
+const DEFAULT_TEST_URN =
+  "dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6Zm9yZ2Utdmlld2VyLW1vZGVscy9CUjYtQ1NGQUlQLklGQw";
 
 // Função para obter URN válida (remove fake, usa padrão se necessário)
 function getValidUrn(urn?: string): string {
@@ -29,19 +31,24 @@ function getValidUrn(urn?: string): string {
   try {
     // Decodifica para verificar se é fake
     const decoded = Buffer.from(urn, "base64").toString();
-    
+
     // Se contém "forge-viewer-models/" mas NÃO termina com .IFC/.ifc, é provável fake
-    if (decoded.includes("forge-viewer-models/") && !decoded.match(/\.(ifc|IFC)$/)) {
-      console.log("🔄 URN fake detectada (sem extensão IFC válida), usando URN padrão de teste");
+    if (
+      decoded.includes("forge-viewer-models/") &&
+      !decoded.match(/\.(ifc|IFC)$/)
+    ) {
+      console.log(
+        "🔄 URN fake detectada (sem extensão IFC válida), usando URN padrão de teste"
+      );
       return DEFAULT_TEST_URN;
     }
-    
+
     // Se é a URN padrão que definimos, é válida
     if (urn === DEFAULT_TEST_URN) {
       console.log("✅ URN padrão válida detectada");
       return urn;
     }
-    
+
     // Se chegou até aqui, considera válida
     console.log("✅ URN válida detectada");
     return urn;
@@ -138,6 +145,9 @@ app.get("/api/viewer-urn/:id", async (req: Request, res: Response) => {
 
 // Rotas REST para múltiplos modelos
 app.use("/api/models", modelsRoutes);
+
+// Rotas para upload e processamento IFC
+app.use("/api/ifc", ifcUploadRoutes);
 
 /**
  * Endpoint para obter token do Forge
