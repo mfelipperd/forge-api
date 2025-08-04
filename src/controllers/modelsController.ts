@@ -216,14 +216,8 @@ export class ModelsController {
         });
       }
 
-      // Primeiro tentar deletar da coleção principal (Model)
-      let model = await Model.findByIdAndDelete(id);
-
-      // Se não encontrou, tentar na coleção de modelos personalizados
-      if (!model) {
-        const CustomModel = require("../models/customModelModel").default;
-        model = await CustomModel.findByIdAndDelete(id);
-      }
+      // Deletar da coleção unificada (Model)
+      const model = await Model.findByIdAndDelete(id);
 
       if (!model) {
         return res.status(404).json({
