@@ -28,20 +28,25 @@ export class ModelsController {
       const mappedModels = allModels.map((model: any) => ({
         ...model.toObject(),
         // Determinar source baseado no tipo de arquivo ou metadata
-        source: model.fileType === "manual" || model.tags?.includes("manual") ? "custom" : "regular",
+        source:
+          model.fileType === "manual" || model.tags?.includes("manual")
+            ? "custom"
+            : "regular",
         uploadDate: model.uploadDate || model.updatedAt,
       }));
 
       // Contar por tipo
-      const regularCount = mappedModels.filter(m => m.source === "regular").length;
-      const customCount = mappedModels.filter(m => m.source === "custom").length;
+      const regularCount = mappedModels.filter(
+        (m) => m.source === "regular"
+      ).length;
+      const customCount = mappedModels.filter(
+        (m) => m.source === "custom"
+      ).length;
 
       console.log(
         `📋 Listando TODOS os modelos: ${mappedModels.length} encontrados`
       );
-      console.log(
-        `   Regular: ${regularCount}, Custom: ${customCount}`
-      );
+      console.log(`   Regular: ${regularCount}, Custom: ${customCount}`);
 
       res.json({
         success: true,
