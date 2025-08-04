@@ -2,17 +2,19 @@
 
 ## ⚠️ **IMPORTANTE: Credenciais Comprometidas**
 
-As credenciais do Autodesk Forge neste repositório foram **COMPROMETIDAS** e detectadas pelo GitGuardian. 
+As credenciais do Autodesk Forge neste repositório foram **COMPROMETIDAS** e detectadas pelo GitGuardian.
 
 ### 🚨 **Ações Imediatas Necessárias**
 
 1. **Revogar credenciais atuais no painel da Autodesk:**
+
    - Acesse: https://aps.autodesk.com/developer/overview
    - Vá para seu aplicativo
    - Gere novas credenciais (Client ID e Client Secret)
    - Revogue as credenciais antigas
 
 2. **Atualizar arquivo .env local:**
+
    ```bash
    cp .env.example .env
    # Edite .env com as NOVAS credenciais
@@ -32,6 +34,7 @@ As credenciais do Autodesk Forge neste repositório foram **COMPROMETIDAS** e de
 ## 🛡️ **Melhores Práticas de Segurança**
 
 ### ✅ **O que fazer:**
+
 - Sempre usar variáveis de ambiente para credenciais
 - Manter arquivo `.env` fora do controle de versão
 - Usar `.env.example` com valores placeholder
@@ -39,6 +42,7 @@ As credenciais do Autodesk Forge neste repositório foram **COMPROMETIDAS** e de
 - Usar diferentes credenciais para dev/staging/prod
 
 ### ❌ **Nunca fazer:**
+
 - Commitar arquivos `.env` com credenciais reais
 - Hardcodar credenciais no código fonte
 - Compartilhar credenciais via chat/email
@@ -47,12 +51,14 @@ As credenciais do Autodesk Forge neste repositório foram **COMPROMETIDAS** e de
 ## 🔧 **Configuração Segura**
 
 1. **Clone do repositório:**
+
    ```bash
    git clone <repo>
    cd forge-api
    ```
 
 2. **Configurar ambiente:**
+
    ```bash
    cp .env.example .env
    # Editar .env com SUS credenciais (não committear!)
