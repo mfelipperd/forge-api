@@ -2,46 +2,14 @@ import axios from "axios";
 import forgeAuthService from "./forgeAuthService";
 
 /**
- * URN padrão válida para teste
- */
-// Default URN for testing when no valid URN is available - Real URN from Autodesk extension
-const DEFAULT_TEST_URN =
-  "dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6Zm9yZ2Utdmlld2VyLW1vZGVscy9CUjYtQ1NGQUlQLklGQw";
-
-/**
- * Função para obter URN válida (apenas para fallback, não substitui URNs reais)
- */
-function getValidUrn(urn?: string): string {
-  if (!urn) {
-    console.log("🔄 URN não fornecida, usando URN padrão de teste");
-    return DEFAULT_TEST_URN;
-  }
-
-  try {
-    const decoded = Buffer.from(urn, "base64").toString();
-    // Apenas retorna URN de teste para URNs claramente fake/demo
-    // URNs reais do Forge devem ser mantidas como estão
-    if (
-      decoded.includes("forge-viewer-models/") &&
-      !decoded.includes("forge-real-")
-    ) {
-      console.log("🔄 URN fake detectada, usando URN padrão de teste");
-      return DEFAULT_TEST_URN;
-    }
-    // Retorna a URN original para URNs reais
-    console.log("✅ URN válida detectada, mantendo URN original");
-    return urn;
-  } catch {
-    console.log("🔄 URN inválida, usando URN padrão de teste");
-    return DEFAULT_TEST_URN;
-  }
-}
-
-/**
- * Serviço para Model Derivative API
- * Para upload e conversão de modelos conforme documentação APS
+ * Serviço para interação com a Model Derivative API do Forge
  */
 class ModelDerivativeService {
+  private validateUrn(urn: string): void {
+    if (!urn) {
+      throw new Error("URN é obrigatória");
+    }
+  }
   /**
    * Iniciar tradução de modelo para viewables
    */
@@ -50,12 +18,12 @@ class ModelDerivativeService {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const validUrn = getValidUrn(objectUrn);
+        this.validateUrn(objectUrn);
         const token = await forgeAuthService.getAccessToken();
 
         const body = {
           input: {
-            urn: validUrn,
+            urn: objectUrn,
           },
           output: {
             formats: [
@@ -113,11 +81,11 @@ class ModelDerivativeService {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const validUrn = getValidUrn(urn);
+        this.validateUrn(urn);
         const token = await forgeAuthService.getAccessToken();
 
         const response = await axios.get(
-          `https://developer.api.autodesk.com/modelderivative/v2/designdata/${validUrn}/manifest`,
+          `https://developer.api.autodesk.com/modelderivative/v2/designdata/${urn}/manifest`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -215,11 +183,10 @@ class ModelDerivativeService {
     canVisualize: boolean;
   }> {
     try {
-      const validUrn = getValidUrn(urn);
+      this.validateUrn(urn);
       console.log(`🔍 Verificando status para URN: ${urn.substring(0, 50)}...`);
-      console.log(`🔄 Usando URN válida: ${validUrn.substring(0, 50)}...`);
 
-      const manifest = await this.getTranslationStatus(validUrn);
+      const manifest = await this.getTranslationStatus(urn);
       console.log(
         `✅ Manifest obtido, status: ${manifest?.status || "undefined"}`
       );

@@ -4,39 +4,14 @@ import Model from "../models/Model";
 
 const router = Router();
 
-/**
- * Função para validar formato básico de URN
- */
-function isValidUrn(urn: string): boolean {
-  try {
-    if (!urn || typeof urn !== "string") return false;
-
-    // Verificar se é base64
-    const decoded = Buffer.from(urn, "base64").toString("utf8");
-
-    // Verificar se contém estrutura básica de URN do Forge
-    return (
-      decoded.includes("urn:adsk.objects:os.object:") ||
-      decoded.includes("urn:adsk.viewing:") ||
-      decoded.includes("urn:")
-    );
-  } catch {
-    return false;
-  }
-}
+import { isValidUrn } from '../utils/urnValidator';
 
 /**
- * Rotas para gerenciamento de múltiplos modelos 3D
+ * Rotas para gerenciamento de modelos 3D
  */
 
 // GET /api/models - Listar todos os modelos
 router.get("/", modelsController.getAllModels);
-
-// GET /api/models/stats - Estatísticas dos modelos
-router.get("/stats", modelsController.getStats);
-
-// POST /api/models/sync - Sincronizar todos os modelos com Forge
-router.post("/sync", modelsController.syncAllModels);
 
 // GET /api/models/:id - Obter modelo específico
 router.get("/:id", modelsController.getModel);
@@ -88,10 +63,10 @@ router.post("/upload-urn", async (req: Request, res: Response) => {
       urn: urn.trim(),
       base64Urn: urn.trim(),
       description: description?.trim(),
-      status: "success", // URN já validada e pronta
+      status: "success",
       progress: "complete",
       fileType: "manual",
-      fileSize: 0, // URN manual não tem arquivo físico
+      fileSize: 0,
       tags: ["manual", "upload-urn"],
       metadata: {
         processingMethod: "manual-urn",
@@ -102,11 +77,9 @@ router.post("/upload-urn", async (req: Request, res: Response) => {
 
     await newModel.save();
 
-    console.log(`📥 Nova URN adicionada: ${name} (${urn.substring(0, 20)}...)`);
-
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      message: "URN adicionada com sucesso",
+      message: "Modelo registrado com sucesso",
       model: {
         id: newModel._id,
         name: newModel.name,
@@ -117,12 +90,19 @@ router.post("/upload-urn", async (req: Request, res: Response) => {
         uploadDate: newModel.uploadDate,
       },
     });
-  } catch (error) {
-    console.error("❌ Erro ao adicionar URN:", error);
-    res.status(500).json({
+  } catch (error: any) {
+    const isMongoError =
+      error.name === "MongoError" || error.name === "MongoServerError";
+    const status = isMongoError ? 500 : 400;
+    const message = isMongoError
+      ? "Erro ao salvar modelo no banco de dados"
+      : "Erro ao processar solicitação";
+
+    return res.status(status).json({
       success: false,
-      error: "Erro interno do servidor ao processar URN",
-      details: process.env.NODE_ENV === "development" ? error : undefined,
+      error: message,
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 });
@@ -140,9 +120,8 @@ router.get("/:id/status", modelsController.getModelStatus);
 router.get("/:id/properties", modelsController.getModelProperties);
 
 // Admin endpoint - atualizar todos os modelos para success
-router.post("/admin/mark-success", async (req, res) => {
+router.post("/admin/mark-success", async (req: Request, res: Response) => {
   try {
-    const Model = require("../models/Model").default;
     const result = await Model.updateMany(
       { status: "uploaded" },
       { status: "success", progress: "100%" }
@@ -150,20 +129,22 @@ router.post("/admin/mark-success", async (req, res) => {
 
     const models = await Model.find({}, "name fileName status progress");
 
-    res.json({
+    return res.json({
       success: true,
       message: `${result.modifiedCount} modelos atualizados`,
-      models: models.map((m: any) => ({
+      models: models.map((m) => ({
         name: m.name,
         fileName: m.fileName,
         status: m.status,
         progress: m.progress,
       })),
     });
-  } catch (error) {
-    res.status(500).json({
+  } catch (error: any) {
+    return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Erro desconhecido",
+      error: "Erro ao atualizar modelos",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 });

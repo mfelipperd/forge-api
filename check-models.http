@@ -1,5 +1,0 @@
-### Verificar Modelos no Banco de Dados
-
-### Listar todos os modelos
-GET http://localhost:8081/api/models
-Content-Type: application/json

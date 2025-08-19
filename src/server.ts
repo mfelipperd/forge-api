@@ -2,81 +2,48 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import path from "path";
 import db from "./models";
-import doorRoutes from "./routes/doorRoutes";
-import modelRoutes from "./routes/modelRoutes";
+import Model from "./models/Model";
 import modelsRoutes from "./routes/modelsRoutes";
 import ifcUploadRoutes from "./routes/ifcUploadRoutes";
-import forgeAuthService from "./services/forgeAuthService";
 
 const app = express();
 
-// URN padrão válida para teste (modelo que sabemos que funciona)
-// Default URN for testing when no valid URN is available - Real URN from Autodesk extension
-const DEFAULT_TEST_URN =
-  "dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6Zm9yZ2Utdmlld2VyLW1vZGVscy9CUjYtQ1NGQUlQLklGQw";
-
-// Função para obter URN válida (remove fake, usa padrão se necessário)
-function getValidUrn(urn?: string): string {
-  // Se não tem URN, usa a padrão
-  if (!urn) {
-    console.log("🔄 URN não fornecida, usando URN padrão de teste");
-    return DEFAULT_TEST_URN;
-  }
-
-  try {
-    // Decodifica para verificar se é fake
-    const decoded = Buffer.from(urn, "base64").toString();
-
-    // Se contém "forge-viewer-models/" mas NÃO termina com .IFC/.ifc, é provável fake
-    if (
-      decoded.includes("forge-viewer-models/") &&
-      !decoded.match(/\.(ifc|IFC)$/)
-    ) {
-      console.log(
-        "🔄 URN fake detectada (sem extensão IFC válida), usando URN padrão de teste"
-      );
-      return DEFAULT_TEST_URN;
-    }
-
-    // Se é a URN padrão que definimos, é válida
-    if (urn === DEFAULT_TEST_URN) {
-      console.log("✅ URN padrão válida detectada");
-      return urn;
-    }
-
-    // Se chegou até aqui, considera válida
-    console.log("✅ URN válida detectada");
-    return urn;
-  } catch {
-    // Se não conseguir decodificar, usa padrão
-    console.log("🔄 URN inválida, usando URN padrão de teste");
-    return DEFAULT_TEST_URN;
-  }
+// Interface para erros da API
+interface ApiError extends Error {
+  status?: number;
+  code?: string;
 }
 
-// Configurações de CORS
-const corsOptions = {
-  origin: "*",
-};
+// Middleware de tratamento de erros global
+function errorHandler(
+  err: ApiError,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const status = err.status || 500;
+  const message = err.message || "Erro interno do servidor";
 
-// Middlewares
-app.use(cors(corsOptions));
+  res.status(status).json({
+    success: false,
+    error: message,
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+  });
+}
+
+// Configurações de CORS e Middlewares
+app.use(cors({ origin: "*" }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use((req, res, next) => {
-  console.log(`��� ${req.method} ${req.path}`);
-  next();
-});
-
 // Configuração do banco de dados
 const useCloud = process.env.NODE_ENV === "production";
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8081;
 
 // Conectar ao MongoDB com error handling robusto
 db.mongoose
@@ -85,101 +52,200 @@ db.mongoose
     console.log("✅ Conectado ao banco de dados!");
   })
   .catch((err: any) => {
-    console.log("❌ Não foi possível conectar ao banco de dados!", err.message);
-    console.log("🔧 Continuando em modo desenvolvimento...");
-    // Não sair do processo em desenvolvimento para permitir debugging
+    const errorMessage = `Falha na conexão com o banco de dados: ${err.message}`;
     if (process.env.NODE_ENV === "production") {
-      process.exit();
+      throw new Error(errorMessage);
+    } else {
+      // Em desenvolvimento, apenas registra o erro mas continua executando
+      console.error(errorMessage);
     }
   });
 
-// Registrar modelos
-require("./models/doorModel");
-
-// Registrar rotas
-doorRoutes(app);
-modelRoutes(app);
-
 // Endpoint de teste
 app.get("/api/test", (req: Request, res: Response) => {
-  res.json({ message: "Teste funcionando!", timestamp: new Date() });
+  res.json({
+    success: true,
+    data: {
+      message: "API funcionando",
+      timestamp: new Date(),
+    },
+  });
 });
 
-/**
- * Endpoint para obter URN válida para visualização
- * Remove URNs fake e retorna sempre uma URN válida
- * DEVE estar ANTES de app.use("/api/models", modelsRoutes)
- */
+// Endpoint de teste para verificar variáveis de ambiente
+app.get("/api/debug-env", (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: {
+      hasClientId: !!process.env.FORGE_CLIENT_ID,
+      hasClientSecret: !!process.env.FORGE_CLIENT_SECRET,
+      clientIdLength: process.env.FORGE_CLIENT_ID?.length || 0,
+      clientSecretLength: process.env.FORGE_CLIENT_SECRET?.length || 0,
+      timestamp: new Date(),
+    },
+  });
+});
+
+// Endpoint de teste para verificar credenciais do Forge
+app.get("/api/test-forge-credentials", async (req: Request, res: Response) => {
+  try {
+    const clientId = process.env.FORGE_CLIENT_ID;
+    const clientSecret = process.env.FORGE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      return res.status(400).json({
+        success: false,
+        error: "Credenciais não configuradas",
+        hasClientId: !!clientId,
+        hasClientSecret: !!clientSecret,
+      });
+    }
+
+    // Testar apenas a validação das credenciais (sem fazer chamada real)
+    res.json({
+      success: true,
+      message: "Credenciais configuradas corretamente",
+      data: {
+        clientId: `${clientId.substring(0, 10)}...`,
+        clientSecret: `${clientSecret.substring(0, 10)}...`,
+        clientIdLength: clientId.length,
+        clientSecretLength: clientSecret.length,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: "Erro ao verificar credenciais",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+// Endpoint de token para Forge Viewer (ESSENCIAL para frontend)
+app.get("/token", async (req: Request, res: Response) => {
+  try {
+    // Importar o APSOfficialService que está funcionando
+    const { APSOfficialService } = await import(
+      "./services/apsOfficialService"
+    );
+    const apsService = new APSOfficialService();
+
+    const credentials = await apsService.getViewerToken();
+
+    res.json({
+      success: true,
+      access_token: credentials.access_token,
+      token_type: "Bearer",
+      expires_in: credentials.expires_in,
+    });
+  } catch (error: any) {
+    console.error("❌ Erro ao obter token:", error);
+    res.status(500).json({
+      success: false,
+      error: "Falha ao obter token de acesso",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+// Endpoint para obter URN do modelo para o viewer (ESSENCIAL para frontend)
 app.get("/api/viewer-urn/:id", async (req: Request, res: Response) => {
-  console.log("🎯 Endpoint viewer-urn chamado!");
   try {
     const { id } = req.params;
-    const Model = require("./models/Model").default;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        error: "ID do modelo não fornecido",
+      });
+    }
+
+    // Buscar modelo no banco
     const model = await Model.findById(id);
 
     if (!model) {
-      return res.status(404).json({ error: "Modelo não encontrado" });
+      return res.status(404).json({
+        success: false,
+        error: "Modelo não encontrado",
+      });
     }
 
-    // Sempre retorna URN válida (remove fakes, usa padrão se necessário)
-    const validUrn = getValidUrn(model.base64Urn);
+    if (!model.urn) {
+      return res.status(400).json({
+        success: false,
+        error: "Modelo não possui URN válida",
+        modelId: id,
+        status: model.status,
+      });
+    }
 
-    console.log(`🎯 Modelo: ${model.name}`);
-    console.log(`✅ URN válida: ${validUrn.substring(0, 50)}...`);
+    // Verificar se o modelo está traduzido e pronto para visualização
+    if (model.status !== "success") {
+      return res.status(400).json({
+        success: false,
+        error: "Modelo não está pronto para visualização",
+        modelId: id,
+        status: model.status,
+        progress: model.progress,
+      });
+    }
 
     res.json({
       success: true,
       data: {
-        id: model._id,
+        modelId: id,
+        urn: model.urn,
         name: model.name,
         fileName: model.fileName,
-        urn: validUrn, // Sempre válida
         status: model.status,
+        canVisualize: true,
       },
     });
-  } catch (error) {
-    console.error("Erro ao obter URN válida:", error);
-    res.status(500).json({ error: "Erro interno do servidor" });
+  } catch (error: any) {
+    console.error("❌ Erro ao obter URN do viewer:", error);
+    res.status(500).json({
+      success: false,
+      error: "Falha ao obter URN do modelo",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 });
 
-// Rotas REST para múltiplos modelos
+// Usar rotas IFC
+app.use("/api/models/ifc", ifcUploadRoutes);
+
+// Rotas principais de modelos
 app.use("/api/models", modelsRoutes);
 
-// Rotas para upload e processamento IFC
-app.use("/api/ifc", ifcUploadRoutes);
+// Registrar middleware de erro global
+app.use(errorHandler);
 
 /**
- * Endpoint para obter token do Forge
- * Baseado exatamente no repositório original
+ * Documentação da API
  */
-app.get("/token", async (req: Request, res: Response) => {
-  try {
-    const token = await forgeAuthService.getAccessToken();
-    res.json(token);
-  } catch (error) {
-    console.error("Erro ao obter token:", error);
-    res.status(500).json({ error: "Falha na autenticação" });
-  }
-});
-
-// Configuração para produção
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../client/build")));
-
-  app.get("*", (req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, "../client", "build", "index.html"));
-  });
-}
-
-// Rota raiz
 app.get("/", (req: Request, res: Response) => {
   res.json({
-    message: "🚀 Forge API Server - URN Generation & Model Management",
-    version: "1.0.0",
+    success: true,
+    name: "Forge API Server - Simplificado",
+    version: "2.0.0",
+    description: "API simplificada com rota IFC funcional",
     endpoints: {
+      status: "/api/test",
       token: "/token",
-      doors: "/api/doors",
+      viewer: "/api/viewer-urn/:id",
+      models: {
+        base: "/api/models",
+        list: "/api/models",
+        byId: "/api/models/:id",
+        upload: "/api/models/upload-urn",
+        ifc: {
+          upload: "/api/models/ifc/upload",
+          status: "/api/models/ifc/status/:id",
+        },
+      },
     },
   });
 });

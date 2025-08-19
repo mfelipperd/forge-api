@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import forgeSDKService from "./forgeSDKServiceSimple";
+import forgeSDKService from "./forgeSDKService";
 
 /**
  * Serviço para upload e processamento de arquivos IFC usando SDK oficial
@@ -17,7 +17,8 @@ class IFCProcessingServiceSDK {
     )}`.toLowerCase();
 
     console.log(
-      `🔧 IFCProcessingServiceSDK inicializado com bucket: ${this.bucketKey}`
+      "[Forge] IFCProcessingService inicializado com bucket:",
+      this.bucketKey
     );
   }
 
@@ -35,13 +36,7 @@ class IFCProcessingServiceSDK {
     error?: string;
   }> {
     try {
-      console.log(`🚀 Iniciando processamento IFC via SDK: ${fileName}`);
-
-      // Ler arquivo
       const fileBuffer = fs.readFileSync(filePath);
-      console.log(`📁 Arquivo lido: ${fileBuffer.length} bytes`);
-
-      // Usar o pipeline completo do SDK
       const result = await forgeSDKService.processFile(
         this.bucketKey,
         fileName,
@@ -49,10 +44,6 @@ class IFCProcessingServiceSDK {
       );
 
       if (result.success) {
-        console.log(`🎉 Processamento IFC via SDK concluído com sucesso!`);
-        console.log(`   📦 URN: ${result.urn}`);
-        console.log(`   🔗 ObjectId: ${result.objectId}`);
-
         return {
           success: true,
           urn: result.urn,
@@ -60,14 +51,14 @@ class IFCProcessingServiceSDK {
           translationStatus: "inprogress",
         };
       } else {
-        console.error(`❌ Erro no processamento IFC via SDK: ${result.error}`);
+        console.error("[Forge] Erro no processamento IFC:", result.error);
         return {
           success: false,
           error: result.error,
         };
       }
     } catch (error) {
-      console.error("❌ Erro no processamento IFC via SDK:", error);
+      console.error("[Forge] Erro no processamento IFC:", error);
       return {
         success: false,
         error:
@@ -88,7 +79,7 @@ class IFCProcessingServiceSDK {
     messages?: any[];
   }> {
     try {
-      console.log(`🔍 Verificando status da tradução via SDK: ${urn}`);
+      console.log("[Forge] Verificando status da tradução:", urn);
 
       const manifest = await forgeSDKService.getTranslationStatus(urn);
 
@@ -99,7 +90,7 @@ class IFCProcessingServiceSDK {
         messages: manifest.derivatives,
       };
     } catch (error) {
-      console.error("❌ Erro ao verificar status via SDK:", error);
+      console.error("[Forge] Erro ao verificar status:", error);
 
       // Se não conseguir verificar, assume que está em progresso
       return {
@@ -117,7 +108,7 @@ class IFCProcessingServiceSDK {
     try {
       return await forgeSDKService.getAccessToken();
     } catch (error) {
-      console.error("❌ Erro ao obter token via SDK:", error);
+      console.error("[Forge] Erro ao obter token:", error);
       throw error;
     }
   }
@@ -129,10 +120,10 @@ class IFCProcessingServiceSDK {
     try {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
-        console.log(`🧹 Arquivo temporário removido: ${filePath}`);
+        console.log("[Forge] Arquivo temporário removido:", filePath);
       }
     } catch (error) {
-      console.warn(`⚠️ Erro ao remover arquivo temporário: ${error}`);
+      console.warn("[Forge] Erro ao remover arquivo temporário:", error);
     }
   }
 
@@ -153,7 +144,7 @@ class IFCProcessingServiceSDK {
     const results = [];
 
     for (const file of files) {
-      console.log(`🔄 Processando arquivo ${file.fileName}...`);
+      console.log("[Forge] Processando arquivo:", file.fileName);
 
       try {
         const result = await this.processIFCFile(file.filePath, file.fileName);
@@ -178,22 +169,14 @@ class IFCProcessingServiceSDK {
 
   /**
    * Listar arquivos no bucket
+   * Não implementado no SDK - use API REST se necessário
    */
   async listBucketObjects(): Promise<any[]> {
-    try {
-      console.log(`📋 Listando objetos no bucket: ${this.bucketKey}`);
-
-      // Note: forge-apis SDK não tem método direto para listar objetos
-      // Usaremos a API REST quando necessário
-      console.log(
-        "⚠️ Listagem de objetos não implementada no SDK - use API REST se necessário"
-      );
-      return [];
-    } catch (error) {
-      console.error("❌ Erro ao listar objetos do bucket:", error);
-      return [];
-    }
+    console.log("[Forge] Listagem de objetos não implementada no SDK");
+    return [];
   }
 }
+
+export const ifcProcessingService = new IFCProcessingServiceSDK();
 
 export default new IFCProcessingServiceSDK();

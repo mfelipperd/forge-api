@@ -1,5 +1,4 @@
 import axios from "axios";
-import credentials from "../config/credentials";
 
 /**
  * Interface para o token de acesso do Forge
@@ -25,31 +24,23 @@ class ForgeAuthService {
     try {
       // Verificar se há token válido em cache
       if (this.cachedToken && this.isTokenValid()) {
-        console.log("🔄 Usando token em cache");
-        // Garantir que o token em cache é uma string
         if (typeof this.cachedToken === "string") {
           return this.cachedToken;
         } else {
-          console.log("⚠️ Token em cache não é string, limpando cache...");
           this.cachedToken = null;
+          throw new Error("Token em cache inválido - não é uma string");
         }
       }
 
-      console.log("🔑 Solicitando novo token do Forge...");
-
-      // Criar dados no formato URL-encoded
-      const data = new URLSearchParams();
-      data.append("client_id", credentials.credentials.client_id);
-      data.append("client_secret", credentials.credentials.client_secret);
-      data.append("grant_type", credentials.credentials.grant_type);
-      data.append("scope", credentials.credentials.scope);
-
-      console.log("URL:", credentials.Authentication);
-      console.log("Client ID:", credentials.credentials.client_id);
-
+      // Obter token via API direta
       const response = await axios.post(
-        credentials.Authentication,
-        data.toString(),
+        "https://developer.api.autodesk.com/authentication/v1/token",
+        new URLSearchParams({
+          client_id: process.env.FORGE_CLIENT_ID!,
+          client_secret: process.env.FORGE_CLIENT_SECRET!,
+          grant_type: "client_credentials",
+          scope: "data:read data:write bucket:create bucket:read",
+        }),
         {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -57,56 +48,19 @@ class ForgeAuthService {
         }
       );
 
-      const tokenData: ForgeToken = response.data;
-
-      // Debug completo do token recebido
-      console.log("🔍 DEBUG TOKEN RECEBIDO:");
-      console.log("- tokenData completo:", tokenData);
-      console.log("- access_token tipo:", typeof tokenData.access_token);
-      console.log("- access_token valor:", tokenData.access_token);
-      console.log(
-        "- access_token constructor:",
-        tokenData.access_token?.constructor?.name
-      );
+      const token = response.data.access_token;
 
       // Cachear token (com margem de segurança de 5 minutos)
-      this.cachedToken = tokenData.access_token;
-      this.tokenExpiresAt = Date.now() + (tokenData.expires_in - 300) * 1000;
+      this.cachedToken = token;
+      this.tokenExpiresAt = Date.now() + (3600 - 300) * 1000; // 1 hora - 5 min
 
-      // Debug do token cacheado
-      console.log("🔍 DEBUG TOKEN CACHEADO:");
-      console.log("- cachedToken tipo:", typeof this.cachedToken);
-      console.log("- cachedToken valor:", this.cachedToken);
-
-      console.log(
-        `✅ Token obtido com sucesso! Expira em ${tokenData.expires_in} segundos`
-      );
-
-      // Garantir que retornamos uma string
-      if (typeof this.cachedToken === "string") {
-        return this.cachedToken;
-      } else {
-        console.error(
-          `❌ Token não é string: ${typeof this.cachedToken}`,
-          this.cachedToken
-        );
-        throw new Error("Token obtido não é uma string válida");
-      }
+      return token;
     } catch (error: any) {
-      console.error(
-        "❌ Erro ao obter token do Forge:",
-        error.response?.data || error.message
-      );
-
       // Limpar cache em caso de erro
       this.cachedToken = null;
       this.tokenExpiresAt = 0;
 
-      // Limpar cache em caso de erro
-      this.cachedToken = null;
-      this.tokenExpiresAt = 0;
-
-      throw new Error("Falha na autenticação com Forge");
+      throw new Error(`Falha na autenticação com Forge: ${error.message}`);
     }
   }
 
@@ -123,7 +77,6 @@ class ForgeAuthService {
   clearCache(): void {
     this.cachedToken = null;
     this.tokenExpiresAt = 0;
-    console.log("🧹 Cache de token limpo");
   }
 
   /**

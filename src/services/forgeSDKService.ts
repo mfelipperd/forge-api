@@ -6,22 +6,18 @@ import {
 } from "forge-apis";
 
 /**
- * Serviço Forge usando SDK oficial da Autodesk
- * Resolve problemas de "Legacy endpoint deprecated" e outros issues de compatibilidade
+ * Serviço principal de interação com Forge SDK
  */
-class ForgeSDKService {
+export class ForgeSDKService {
   private authClient: AuthClientTwoLegged;
 
   constructor() {
-    console.log("🔧 Inicializando ForgeSDKService com SDK oficial...");
-
     if (!process.env.FORGE_CLIENT_ID || !process.env.FORGE_CLIENT_SECRET) {
       throw new Error(
         "FORGE_CLIENT_ID e FORGE_CLIENT_SECRET devem estar definidos"
       );
     }
 
-    // Configurar cliente de autenticação
     this.authClient = new AuthClientTwoLegged(
       process.env.FORGE_CLIENT_ID,
       process.env.FORGE_CLIENT_SECRET,
@@ -36,7 +32,7 @@ class ForgeSDKService {
       true // autoRefresh
     );
 
-    console.log("✅ ForgeSDKService inicializado com sucesso");
+    console.log("[Forge] Service inicializado com sucesso");
   }
 
   /**
@@ -44,26 +40,22 @@ class ForgeSDKService {
    */
   async getAccessToken(): Promise<string> {
     try {
-      console.log("🔑 Obtendo token via SDK oficial...");
+      console.log("[Forge] Obtendo token...");
       const credentials = await this.authClient.authenticate();
-      console.log("✅ Token obtido com sucesso via SDK");
+      console.log("[Forge] Token obtido com sucesso");
       return credentials.access_token;
     } catch (error) {
-      console.error("❌ Erro ao obter token via SDK:", error);
-      throw new Error(
-        `Falha na autenticação: ${
-          error instanceof Error ? error.message : "Erro desconhecido"
-        }`
-      );
+      console.error("[Forge] Erro ao obter token:", error);
+      throw error;
     }
   }
 
   /**
    * Verificar se bucket existe
    */
-  async checkBucketExists(bucketKey: string): Promise<boolean> {
+  private async checkBucketExists(bucketKey: string): Promise<boolean> {
     try {
-      console.log(`🔍 Verificando se bucket existe: ${bucketKey}`);
+      console.log("[Forge] Verificando bucket: " + bucketKey);
       const credentials = await this.authClient.authenticate();
       const bucketsApi = new BucketsApi();
 
@@ -72,177 +64,129 @@ class ForgeSDKService {
         this.authClient,
         credentials
       );
-
-      console.log(`✅ Bucket ${bucketKey} existe`);
       return true;
     } catch (error: any) {
-      if (error.statusCode === 404) {
-        console.log(`📦 Bucket ${bucketKey} não existe`);
-        return false;
-      }
-      console.error("❌ Erro ao verificar bucket:", error);
+      if (error.statusCode === 404) return false;
       throw error;
     }
   }
 
   /**
-   * Criar bucket
+   * Criar bucket no Forge
    */
-  async createBucket(bucketKey: string): Promise<any> {
+  async createBucket(bucketKey: string): Promise<void> {
     try {
-      console.log(`📦 Criando bucket via SDK: ${bucketKey}`);
+      // Verificar se bucket já existe
+      const exists = await this.checkBucketExists(bucketKey);
+      if (exists) {
+        console.log("[Forge] Bucket " + bucketKey + " já existe");
+        return;
+      }
+
+      console.log("[Forge] Criando bucket: " + bucketKey);
       const credentials = await this.authClient.authenticate();
       const bucketsApi = new BucketsApi();
 
-      const bucketPayload = {
-        bucketKey: bucketKey,
-        policyKey: "transient",
-      };
-
-      const result = await bucketsApi.createBucket(
-        bucketPayload,
+      await bucketsApi.createBucket(
+        { bucketKey, policyKey: "transient" },
         {},
         this.authClient,
         credentials
       );
 
-      console.log(`✅ Bucket criado com sucesso via SDK: ${bucketKey}`);
-      return result.body;
+      console.log("[Forge] Bucket criado com sucesso");
     } catch (error: any) {
-      // Se bucket já existe, não é erro
-      if (error.statusCode === 409) {
-        console.log(`⚠️ Bucket ${bucketKey} já existe (409 - não é erro)`);
-        return { bucketKey: bucketKey, message: "Bucket já existe" };
-      }
-
-      console.error("❌ Erro ao criar bucket via SDK:", error);
-      throw new Error(
-        `Falha ao criar bucket: ${error.message || "Erro desconhecido"}`
-      );
-    }
-  }
-
-  /**
-   * Garantir que bucket existe (criar se não existir)
-   */
-  async ensureBucketExists(bucketKey: string): Promise<void> {
-    try {
-      const exists = await this.checkBucketExists(bucketKey);
-
-      if (!exists) {
-        await this.createBucket(bucketKey);
-      }
-
-      console.log(`✅ Bucket ${bucketKey} está disponível`);
-    } catch (error) {
-      console.error(`❌ Erro ao garantir bucket ${bucketKey}:`, error);
+      console.error("[Forge] Erro ao criar bucket:", error);
       throw error;
     }
   }
 
   /**
-   * Upload de arquivo para bucket
+   * Upload de objeto para o Forge
    */
-  async uploadFile(
+  async uploadObject(
     bucketKey: string,
-    objectName: string,
-    fileBuffer: Buffer
-  ): Promise<any> {
+    objectKey: string,
+    fileData: Buffer
+  ): Promise<{ objectId: string }> {
     try {
-      console.log(
-        `📤 Fazendo upload via SDK: ${objectName} (${fileBuffer.length} bytes)`
-      );
+      console.log("[Forge] Iniciando upload do objeto: " + objectKey);
       const credentials = await this.authClient.authenticate();
       const objectsApi = new ObjectsApi();
 
-      const result = await objectsApi.uploadObject(
+      const response = await objectsApi.uploadObject(
         bucketKey,
-        objectName,
-        fileBuffer.length,
-        fileBuffer,
+        objectKey,
+        fileData.length,
+        fileData,
         {},
         this.authClient,
         credentials
       );
 
-      console.log(`✅ Upload concluído via SDK: ${result.body.objectId}`);
-      return result.body;
+      console.log("[Forge] Upload concluído com sucesso");
+      return { objectId: response.body.objectId };
     } catch (error: any) {
-      console.error("❌ Erro no upload via SDK:", error);
-      throw new Error(
-        `Falha no upload: ${error.message || "Erro desconhecido"}`
-      );
+      console.error("[Forge] Erro no upload:", error);
+      throw error;
     }
   }
 
   /**
-   * Iniciar tradução (Model Derivative)
+   * Iniciar tradução do objeto
    */
-  async startTranslation(urn: string): Promise<any> {
+  async translateObject(objectId: string): Promise<{ urn: string }> {
     try {
-      console.log(`🔄 Iniciando tradução via SDK para URN: ${urn}`);
+      const urn = Buffer.from(objectId).toString("base64");
+      console.log("[Forge] Iniciando tradução, URN: " + urn);
+
       const credentials = await this.authClient.authenticate();
       const derivativesApi = new DerivativesApi();
 
-      const job = {
-        input: {
-          urn: urn,
+      await derivativesApi.translate(
+        {
+          input: { urn },
+          output: { formats: [{ type: "svf", views: ["2d", "3d"] }] },
         },
-        output: {
-          formats: [
-            {
-              type: "svf2",
-              views: ["2d", "3d"],
-            },
-          ],
-        },
-      };
-
-      const result = await derivativesApi.translate(
-        job,
         {},
         this.authClient,
         credentials
       );
 
-      console.log("✅ Tradução iniciada com sucesso via SDK");
-      return result.body;
+      console.log("[Forge] Tradução iniciada com sucesso");
+      return { urn };
     } catch (error: any) {
-      console.error("❌ Erro na tradução via SDK:", error);
-      throw new Error(
-        `Falha na tradução: ${error.message || "Erro desconhecido"}`
-      );
+      console.error("[Forge] Erro na tradução:", error);
+      throw error;
     }
   }
 
   /**
-   * Verificar status da tradução
+   * Obter status da tradução
    */
   async getTranslationStatus(urn: string): Promise<any> {
     try {
-      console.log(`🔍 Verificando status da tradução via SDK: ${urn}`);
+      console.log("[Forge] Verificando status da tradução: " + urn);
       const credentials = await this.authClient.authenticate();
       const derivativesApi = new DerivativesApi();
 
-      const result = await derivativesApi.getManifest(
+      const response = await derivativesApi.getManifest(
         urn,
         {},
         this.authClient,
         credentials
       );
 
-      console.log(`📊 Status da tradução: ${result.body.status}`);
-      return result.body;
+      console.log("[Forge] Status obtido com sucesso");
+      return response.body;
     } catch (error: any) {
-      console.error("❌ Erro ao verificar status via SDK:", error);
-      throw new Error(
-        `Falha ao verificar status: ${error.message || "Erro desconhecido"}`
-      );
+      console.error("[Forge] Erro ao verificar status:", error);
+      throw error;
     }
   }
 
   /**
-   * Pipeline completo: garantir bucket + upload + tradução
+   * Pipeline completo: upload + tradução
    */
   async processFile(
     bucketKey: string,
@@ -255,46 +199,41 @@ class ForgeSDKService {
     error?: string;
   }> {
     try {
-      console.log(`🚀 Iniciando pipeline completo via SDK para: ${fileName}`);
+      console.log("[Forge] Iniciando pipeline para " + fileName);
 
-      // 1. Garantir bucket
-      await this.ensureBucketExists(bucketKey);
+      // 1. Criar bucket (se não existir)
+      await this.createBucket(bucketKey);
 
       // 2. Upload do arquivo
-      const objectKey = `ifc_${Date.now()}_${fileName.replace(
-        /[^a-zA-Z0-9.-]/g,
-        "_"
-      )}`;
-      const uploadResult = await this.uploadFile(
+      const objectKey =
+        "ifc_" + Date.now() + "_" + fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const uploadResult = await this.uploadObject(
         bucketKey,
         objectKey,
         fileBuffer
       );
 
-      // 3. Converter objectId para URN
-      const urn = Buffer.from(uploadResult.objectId).toString("base64");
+      // 3. Iniciar tradução
+      const translationResult = await this.translateObject(
+        uploadResult.objectId
+      );
 
-      // 4. Iniciar tradução
-      await this.startTranslation(urn);
-
-      console.log(`🎉 Pipeline completo via SDK concluído! URN: ${urn}`);
+      console.log("[Forge] Pipeline concluído com sucesso");
 
       return {
         success: true,
-        urn: urn,
+        urn: translationResult.urn,
         objectId: uploadResult.objectId,
       };
-    } catch (error) {
-      console.error("❌ Erro no pipeline completo via SDK:", error);
+    } catch (error: any) {
+      console.error("[Forge] Erro no pipeline:", error);
       return {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Erro desconhecido no pipeline",
+        error: error.message || "Erro desconhecido",
       };
     }
   }
 }
 
+// Exportar instância única
 export default new ForgeSDKService();

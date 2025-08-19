@@ -1,7 +1,7 @@
 {
   "name": "forge-api",
-  "version": "1.0.0",
-  "description": "Node.js/Express/TypeScript backend for Autodesk Forge integration",
+  "version": "2.0.0",
+  "description": "Node.js/Express/TypeScript backend for Autodesk Forge integration with Drive IFC processing",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
@@ -9,7 +9,9 @@
     "start:complex": "node dist/server.js",
     "dev": "nodemon src/server-simplified.ts",
     "dev:complex": "nodemon src/server.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
     "forge",
@@ -42,9 +44,12 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/forge-apis": "^0.9.7",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.0.2",
     "@types/uuid": "^10.0.0",
+    "jest": "^30.0.5",
     "nodemon": "^3.1.4",
+    "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   }

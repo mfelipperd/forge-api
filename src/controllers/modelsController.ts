@@ -25,14 +25,13 @@ export class ModelsController {
       const allModels = await Model.find(filter).sort({ uploadDate: -1 });
 
       // Mapear modelos com informações padronizadas
-      const mappedModels = allModels.map((model: any) => ({
+      const mappedModels = allModels.map((model) => ({
         ...model.toObject(),
-        // Determinar source baseado no tipo de arquivo ou metadata
         source:
           model.fileType === "manual" || model.tags?.includes("manual")
             ? "custom"
             : "regular",
-        uploadDate: model.uploadDate || model.updatedAt,
+        uploadDate: model.uploadDate || model.uploadDate,
       }));
 
       // Contar por tipo
@@ -43,12 +42,7 @@ export class ModelsController {
         (m) => m.source === "custom"
       ).length;
 
-      console.log(
-        `📋 Listando TODOS os modelos: ${mappedModels.length} encontrados`
-      );
-      console.log(`   Regular: ${regularCount}, Custom: ${customCount}`);
-
-      res.json({
+      return res.json({
         success: true,
         count: mappedModels.length,
         data: mappedModels,
@@ -58,11 +52,12 @@ export class ModelsController {
           total: mappedModels.length,
         },
       });
-    } catch (error) {
-      console.error("Erro ao listar modelos:", error);
-      res.status(500).json({
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
         error: "Erro ao listar modelos",
-        message: error instanceof Error ? error.message : "Erro desconhecido",
+        details:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -71,23 +66,33 @@ export class ModelsController {
   async getModel(req: Request, res: Response) {
     try {
       const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: "ID do modelo não fornecido",
+        });
+      }
+
       const model = await Model.findById(id);
 
       if (!model) {
         return res.status(404).json({
+          success: false,
           error: "Modelo não encontrado",
         });
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: model,
       });
-    } catch (error) {
-      console.error("Erro ao obter modelo:", error);
-      res.status(500).json({
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
         error: "Erro ao obter modelo",
-        message: error instanceof Error ? error.message : "Erro desconhecido",
+        details:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -177,29 +182,45 @@ export class ModelsController {
   async updateModel(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const updates = req.body;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: "ID do modelo não fornecido",
+        });
+      }
 
-      // Campos que não podem ser atualizados
-      delete updates.urn;
-      delete updates.base64Urn;
-      delete updates._id;
-      delete updates.uploadDate;
+      const updates = { ...req.body };
 
-      const model = await Model.findByIdAndUpdate(id, updates, { new: true });
+      // Remover campos protegidos
+      const protectedFields = ["urn", "base64Urn", "_id", "uploadDate"];
+      protectedFields.forEach((field) => delete updates[field]);
+
+      // Validar se há campos para atualizar
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Nenhum campo válido para atualização",
+        });
+      }
+
+      const model = await Model.findByIdAndUpdate(id, updates, {
+        new: true,
+        runValidators: true,
+      });
 
       if (!model) {
         return res.status(404).json({
+          success: false,
           error: "Modelo não encontrado",
         });
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: model,
       });
-    } catch (error) {
-      console.error("Erro ao atualizar modelo:", error);
-      res.status(500).json({
+    } catch (error: any) {
+      return res.status(500).json({
         error: "Erro ao atualizar modelo",
         message: error instanceof Error ? error.message : "Erro desconhecido",
       });
