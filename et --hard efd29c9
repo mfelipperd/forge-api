@@ -1,0 +1,12 @@
+[33me4ed073[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;33mtag: [m[1;33mv1.0.0-stable[m[33m, [m[1;32mfeature/autodesk-drive-integration[m[33m)[m � Limpeza completa: removidos arquivos desnecessários e imports não utilizados - Projeto otimizado para migração NestJS
+[33m3b8c44a[m ✅ Estado funcional completo: API simplificada com todas as funcionalidades essenciais funcionando - Upload IFC, token Forge, viewer URN, gerenciamento de modelos
+[33m459f84c[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #1 from mfelipperd/feature/ifc-upload-processing
+[33ma58b729[m[33m ([m[1;31morigin/feature/ifc-upload-processing[m[33m, [m[1;32mfeature/ifc-upload-processing[m[33m)[m feat: 2
+[33mefd29c9[m feat: 2
+[33m6f7a771[m � SECURITY: Complete security remediation
+[33mb2d4ebf[m � SECURITY: Add security remediation for exposed credentials
+[33mc6c5137[m fix: Unify model deletion logic and remove CustomModel dependencies
+[33m917cfd5[m feat: adjust get model
+[33m9aa864c[m � Correção crítica do problema de URN no viewer
+[33m065d6b8[m � Funcionalidade: Upload Automático de IFC
+[33mae93792[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m)[m � Initial commit - Forge API v1.0 (Versão Estável)
