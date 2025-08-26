@@ -1,0 +1,5 @@
+[33mfe66c3f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: API funcionando - limpeza de arquivos não utilizados e otimizações
+[33m76c5049[m documentation
+[33m3b8c44a[m ✅ Estado funcional completo: API simplificada com todas as funcionalidades essenciais funcionando - Upload IFC, token Forge, viewer URN, gerenciamento de modelos
+[33m459f84c[m Merge pull request #1 from mfelipperd/feature/ifc-upload-processing
+[33ma58b729[m[33m ([m[1;31morigin/feature/ifc-upload-processing[m[33m, [m[1;32mfeature/ifc-upload-processing[m[33m)[m feat: 2
